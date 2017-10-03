@@ -1,6 +1,6 @@
 package http
 
-import account.{BankAccount, JsonSupport, Server, WithdrawRequest}
+import services.{BankAccount, JsonSupport, WithdrawRequest}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.ActorMaterializer

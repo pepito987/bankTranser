@@ -1,8 +1,8 @@
-package account
+package http
 
+import services._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import spray.json.pimpAny
@@ -13,8 +13,6 @@ import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.stream.ActorMaterializer
 import spray.json.DefaultJsonProtocol._
 import spray.json._
-
-import scala.concurrent.Future
 
 class Server extends JsonSupport with AccountOperations with Db{
 

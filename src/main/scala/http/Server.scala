@@ -1,69 +1,77 @@
 package http
 
-import services._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives._
-import spray.json.pimpAny
-
-import scala.util.Random
-//import akka.http.scaladsl.server.directives.MethodDirectives._
-import akka.http.scaladsl.server.directives.RouteDirectives.complete
+import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.server.Directives.{complete, _}
 import akka.stream.ActorMaterializer
+import services._
 import spray.json.DefaultJsonProtocol._
-import spray.json._
+import spray.json.{pimpAny, _}
 
-class Server extends JsonSupport with AccountOperations with Db{
+import scala.collection.mutable
+
+class Server extends JsonSupport {
 
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
 
-  var db = Map.empty[String,BankAccount]
+  //  var db = Map.empty[String,BankAccount]
+  val service = new AccountService {
+    override val db: mutable.Map[String, BankAccount] = mutable.Map.empty
+  }
 
-  val route = {
-    pathPrefix("accounts"){
-      get{
-        complete(db.keySet.toJson)
-      }
-    } ~
-    pathPrefix("account"){
+  val route = respondWithHeader(RawHeader("Content-Type","application/json")){
+    pathPrefix("account") {
       get {
         path(IntNumber) { id =>
-          val response = db.get(s"$id").map(x =>
-            HttpResponse(entity = x.toJson.toString())
-          ).getOrElse(HttpResponse(StatusCodes.NotFound))
-          complete(response)
+          service.get(s"$id") match {
+            case Some(x) => complete(StatusCodes.OK,x)
+            case _ => complete(StatusCodes.NotFound)
+          }
         } ~
-        pathEnd {
-          complete(StatusCodes.NotImplemented)
+          pathEnd {
+            complete(StatusCodes.NotImplemented)
+          }
+      } ~
+        post {
+          service.create() match {
+            case Some(x) => complete(StatusCodes.Created, x)
+            case _ => complete(StatusCodes.InternalServerError)
+          }
+        }
+    } ~
+      pathPrefix("withdraw") {
+        post {
+          entity(as[String]) { body =>
+            val withdrawRequest = body.parseJson.convertTo[WithdrawRequest]
+            service.withdraw(withdrawRequest) match {
+              case Right(acc) => complete(StatusCodes.OK, acc)
+              case Left(err) => complete(StatusCodes.InternalServerError, err)
+            }
+          }
         }
       } ~
-      post {
-        entity(as[String]) { body =>
-          val bl = body.parseJson.convertTo[BigDecimal]
-          val id = Random.nextInt().toString
-          db = db.updated(id, BankAccount(id,bl))
-          complete(HttpResponse(status = StatusCodes.Created, entity = id.toJson.toString()))
-        }
-      }
-    } ~
-    pathPrefix("withdraw") {
-      post {
-        entity(as[String]) { body =>
-          val withdrawRequest = body.parseJson.convertTo[WithdrawRequest]
-          val amount = withdrawRequest.amount
-          val id = withdrawRequest.from
+      pathPrefix("transfer") {
+        post {
+          entity(as[String]) {
+            case b if b.isEmpty => complete(StatusCodes.BadRequest)
+            case body => {
+              val transferRequest = body.parseJson.convertTo[TransferRequest]
+              service.transfer(transferRequest) match {
+                case Right(_) => complete(StatusCodes.OK)
+                case Left(_) => complete(StatusCodes.BadRequest)
+              }
 
-          val acc = db(id)
-          acc withdraw amount
-          complete(HttpResponse(status = StatusCodes.OK, entity = db(id).toJson.toString()))
+            }
+          }
         }
       }
-    }
   }
+
 
   def start = {
     Http().bindAndHandle(route, "localhost", 8080)

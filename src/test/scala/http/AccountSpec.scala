@@ -5,7 +5,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.ActorMaterializer
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
-import spray.json._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
@@ -28,7 +27,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     Await.ready(server.stop, Duration.Inf)
   }
 
-//  "Request GET on /accounts " should {
+//  "GET on /accounts " should {
 //    "return an empty account list" in {
 //
 //      val response = Http("http://localhost:8080/accounts").asString
@@ -50,55 +49,68 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 //    }
 //  }
 
-  "Request GET on /account/{id} " should {
+  "GET /account/{id} " should {
     "return 404 if the account with {id} doesn't exist " in {
 
-      val response = Http("http://localhost:8080/account/0000").asString
+      val response = Http("http://localhost:8080/account/0000")
+        .header("Content-Type","application/json")
+        .asString
 
       response.code shouldBe 404
+      response.header("Content-Type").get shouldBe "application/json"
     }
 
     "return 200 if the account with {id} exist " in {
       val acc = BankAccount("111", 200)
       server.service.db.put(acc.id, acc)
-      val response = Http(s"http://localhost:8080/account/${acc.id}").asString
+      val response = Http(s"http://localhost:8080/account/${acc.id}")
+        .header("Content-Type","application/json")
+        .asString
 
       response.code shouldBe 200
-      printf(response.body.parseJson.prettyPrint)
+      response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[BankAccount] shouldBe acc
     }
 
   }
 
-  "Request GET on /account " should {
+  "GET /account " should {
 
     "return 501  " in {
-      val response = Http("http://localhost:8080/account").asString
+      val response = Http("http://localhost:8080/account")
+        .header("Content-Type","application/json")
+        .asString
 
       response.code shouldBe 501
+      response.header("Content-Type").get shouldBe "application/json"
     }
   }
 
-  "Request Post on /account " should {
+  "Post /account " should {
     "Create a new account" in {
       val balance = BigDecimal(200)
 
-      val response = Http("http://localhost:8080/account").postData("").asString
+      val response = Http("http://localhost:8080/account")
+        .header("Content-Type","application/json")
+        .postData("")
+        .asString
 
       response.code shouldBe 201
+      response.header("Content-Type").get shouldBe "application/json"
       val id = response.body.parseJson.convertTo[String]
       server.service.db.contains(id) shouldBe true
     }
 
   }
 
-  "Request POST on /withdraw" should {
+  "POST /withdraw" should {
     "withdraw money from the account" in {
 
       val acc = BankAccount("123", 200)
       server.service.db.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/withdraw")
+        .header("Content-Type","application/json")
         .postData(WithdrawRequest(acc.id,50).toJson.toString())
         .asString
 
@@ -108,54 +120,6 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     }
   }
 
-  "Request POST on /transfer" should {
-    "return 400 if the body is empty" in {
 
-      val response = Http("http://localhost:8080/transfer")
-        .postData("").asString
-      response.code shouldBe 400
-    }
-
-    "return 400 if the from account do not exist" in {
-
-      val from = "123"
-      val to = "987"
-      val amount = 50
-
-      val response = Http("http://localhost:8080/transfer")
-        .postData(
-          TransferRequest(from,to,amount).toJson.toString()
-        ).asString
-
-      response.code shouldBe 400
-      //Error message in the body?
-
-    }
-
-    "return 200 and the balance reflect the transfer" in {
-
-      val from = "123"
-      val to = "987"
-      val amount = 50
-
-      server.service.db.put(from, BankAccount(from,200))
-      server.service.db.put(to, BankAccount(to,200))
-
-      val response = Http("http://localhost:8080/transfer")
-        .postData(
-          TransferRequest(from,to,amount).toJson.toString()
-        ).asString
-
-      response.code shouldBe 200
-      val fromAcc = server.service.db.get(from).get
-      val toAcc = server.service.db.get(to).get
-
-      fromAcc.balance shouldBe 150
-      toAcc.balance shouldBe 250
-
-      //Error message in the body?
-
-    }
-  }
 
 }

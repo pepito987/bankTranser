@@ -11,4 +11,7 @@ trait JsonSupport extends SprayJsonSupport {
   implicit val withdrawRequestFormat = jsonFormat2(WithdrawRequest)
   implicit val transferRequestFormat = jsonFormat3(TransferRequest)
   implicit val insufficientFundFormat = jsonFormat1(InsufficientFund)
+  implicit val accountNotFoundFormat = jsonFormat1(AccountNotFound)
+  implicit val internalErrorFormat = jsonFormat1(InternalError)
+
 }

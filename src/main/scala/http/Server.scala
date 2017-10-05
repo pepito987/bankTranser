@@ -3,12 +3,10 @@ package http
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.server.Directives.{complete, _}
+import akka.http.scaladsl.server.{MalformedRequestContentRejection, RejectionHandler}
 import akka.stream.ActorMaterializer
 import services._
-import spray.json.DefaultJsonProtocol._
-import spray.json.{pimpAny, _}
 
 import scala.collection.mutable
 
@@ -24,30 +22,34 @@ class Server extends JsonSupport {
     override val db: mutable.Map[String, BankAccount] = mutable.Map.empty
   }
 
-  val route = respondWithHeader(RawHeader("Content-Type","application/json")){
+  val regectionHandler = RejectionHandler.newBuilder()
+    //    .handleNotFound { complete((StatusCodes.NotFound, "Oh man, what you are looking for is long gone.")) }
+    .handle { case MalformedRequestContentRejection(msg, _) => complete((StatusCodes.InternalServerError, InternalError(msg))) }
+    .result()
+
+  val route = handleRejections(regectionHandler) {
     pathPrefix("account") {
       get {
         path(IntNumber) { id =>
           service.get(s"$id") match {
-            case Some(x) => complete(StatusCodes.OK,x)
-            case _ => complete(StatusCodes.NotFound)
+            case Right(x) => complete(StatusCodes.OK, x)
+            case Left(y) => complete(StatusCodes.NotFound, y)
           }
         } ~
           pathEnd {
-            complete(StatusCodes.NotImplemented)
+            complete(StatusCodes.NotImplemented, InternalError())
           }
       } ~
         post {
           service.create() match {
             case Some(x) => complete(StatusCodes.Created, x)
-            case _ => complete(StatusCodes.InternalServerError)
+            case _ => complete(StatusCodes.InternalServerError, InternalError())
           }
         }
     } ~
       pathPrefix("withdraw") {
         post {
-          entity(as[String]) { body =>
-            val withdrawRequest = body.parseJson.convertTo[WithdrawRequest]
+          entity(as[WithdrawRequest]) { withdrawRequest =>
             service.withdraw(withdrawRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
               case Left(err) => complete(StatusCodes.InternalServerError, err)
@@ -57,15 +59,11 @@ class Server extends JsonSupport {
       } ~
       pathPrefix("transfer") {
         post {
-          entity(as[String]) {
-            case b if b.isEmpty => complete(StatusCodes.BadRequest)
-            case body => {
-              val transferRequest = body.parseJson.convertTo[TransferRequest]
-              service.transfer(transferRequest) match {
-                case Right(_) => complete(StatusCodes.OK)
-                case Left(_) => complete(StatusCodes.BadRequest)
-              }
-
+          entity(as[TransferRequest]) { transferRequest =>
+            service.transfer(transferRequest) match {
+              case Right(acc) => complete(StatusCodes.OK, acc)
+              case Left(err) if err.isInstanceOf[InsufficientFund] => complete(StatusCodes.BadRequest, err.asInstanceOf[InsufficientFund])
+              case Left(err) if err.isInstanceOf[AccountNotFound] => complete(StatusCodes.BadRequest, err.asInstanceOf[AccountNotFound])
             }
           }
         }

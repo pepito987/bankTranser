@@ -33,7 +33,7 @@ class Server extends JsonSupport {
         path(IntNumber) { id =>
           service.get(s"$id") match {
             case Right(x) => complete(StatusCodes.OK, x)
-            case Left(y) => complete(StatusCodes.NotFound, y)
+            case Left(y) => complete(StatusCodes.NotFound, ErrorResponse(y))
           }
         } ~
           pathEnd {
@@ -43,7 +43,7 @@ class Server extends JsonSupport {
         post {
           service.create() match {
             case Some(x) => complete(StatusCodes.Created, x)
-            case _ => complete(StatusCodes.InternalServerError, InternalError())
+            case _ => complete(StatusCodes.InternalServerError, ErrorResponse(InternalError()))
           }
         }
     } ~
@@ -52,7 +52,7 @@ class Server extends JsonSupport {
           entity(as[WithdrawRequest]) { withdrawRequest =>
             service.withdraw(withdrawRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
-              case Left(err) => complete(StatusCodes.InternalServerError, err)
+              case Left(err) => complete(StatusCodes.InternalServerError, ErrorResponse(err))
             }
           }
         }
@@ -62,8 +62,7 @@ class Server extends JsonSupport {
           entity(as[TransferRequest]) { transferRequest =>
             service.transfer(transferRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
-              case Left(err) if err.isInstanceOf[InsufficientFund] => complete(StatusCodes.BadRequest, err.asInstanceOf[InsufficientFund])
-              case Left(err) if err.isInstanceOf[AccountNotFound] => complete(StatusCodes.BadRequest, err.asInstanceOf[AccountNotFound])
+              case Left(err) => complete(StatusCodes.BadRequest, ErrorResponse(err))
             }
           }
         }

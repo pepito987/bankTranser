@@ -3,7 +3,7 @@ package http
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
-import services.{BankAccount, JsonSupport, TransferRequest}
+import services.{AccountNotFound, _}
 import spray.json._
 
 import scala.concurrent.Await
@@ -33,11 +33,49 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
         .postData("").asString
 
       response.code shouldBe 400
-      println(response.body)
       response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
     }
 
-    "return 400 if the from account do not exist" in {
+    "return 400 if the from account does not exist" in {
+
+      val from = "123"
+      val to = "987"
+      val amount = 50
+
+      server.service.db.put(to,BankAccount(to,200))
+
+      val response = Http("http://localhost:8080/transfer")
+        .header("Content-Type","application/json")
+        .postData(
+          TransferRequest(from,to,amount).toJson.toString()
+        ).asString
+
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+    }
+
+    "return 400 if the dst account does not exist" in {
+
+      val from = "123"
+      val to = "987"
+      val amount = 50
+
+      server.service.db.put(from,BankAccount(from,200))
+
+      val response = Http("http://localhost:8080/transfer")
+        .header("Content-Type","application/json")
+        .postData(
+          TransferRequest(from,to,amount).toJson.toString()
+        ).asString
+
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+    }
+
+    "return 400 if both account don't not exist" in {
 
       val from = "123"
       val to = "987"
@@ -51,8 +89,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      //Error message in the body?
-
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
     }
 
     "return 200 and the balance reflect the transfer" in {
@@ -72,14 +109,12 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-
+      response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount(from,200)
       val fromAcc = server.service.db.get(from).get
       val toAcc = server.service.db.get(to).get
 
       fromAcc.balance shouldBe 150
       toAcc.balance shouldBe 250
-
-      //Error message in the body?
     }
 
     "return 400 if the amount is bigger than the balance and will not update the accounts" in {
@@ -99,12 +134,11 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe InsufficientFund().err_msg
 
       server.service.db.get(from.id).get shouldBe from
       server.service.db.get(to.id).get shouldBe to
-
     }
-
   }
 
 }

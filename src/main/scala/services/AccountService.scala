@@ -11,10 +11,12 @@ abstract class Request
 case class WithdrawRequest(from: String, amount: BigDecimal ) extends Request
 case class TransferRequest(from: String, to: String, amount: BigDecimal) extends Request
 
-sealed trait Error {
+case class ErrorResponse(error: Error)
+
+trait Error {
   def err_msg: String
 }
-//TODO bad choice
+
 case class InsufficientFund(override val err_msg: String = "Insufficient Fund") extends Error
 case class AccountNotFound(override val err_msg: String = "Account not found") extends Error
 case class InternalError(override val err_msg: String = "Internal Error") extends Error
@@ -63,7 +65,7 @@ trait AccountService {
 
     (src, dst) match {
       case (Some(from), Some(to)) if from.balance >= transferRequest.amount => Right(makeTransfer(from,to, transferRequest.amount))
-      case (_, _) => Left(InsufficientFund())
+      case (Some(_), Some(_)) => Left(InsufficientFund())
       case _ => Left(AccountNotFound())
     }
 

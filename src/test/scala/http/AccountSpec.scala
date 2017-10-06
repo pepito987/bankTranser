@@ -72,6 +72,16 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       response.body.parseJson.convertTo[BankAccount] shouldBe acc
     }
 
+    "return error in json" in {
+      val response = Http("http://localhost:8080/account/0000")
+        .header("Content-Type","application/json")
+        .asString
+
+      response.code shouldBe 404
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+    }
+
   }
 
   "GET /account " should {

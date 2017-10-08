@@ -9,9 +9,12 @@ trait JsonSupport extends SprayJsonSupport with CustomJsonProtocol{
   implicit val accountJsonFormat = jsonFormat2(BankAccount)
   implicit val withdrawRequestFormat = jsonFormat2(WithdrawRequest)
   implicit val transferRequestFormat = jsonFormat3(TransferRequest)
+  implicit val depositRequestFormat = jsonFormat2(DepositRequest)
+
   implicit val insufficientFundFormat = jsonFormat1(InsufficientFund)
   implicit val accountNotFoundFormat = jsonFormat1(AccountNotFound)
   implicit val internalErrorFormat = jsonFormat1(InternalError)
+  implicit val amountNotValidFormat = jsonFormat1(AmountNotValid)
 }
 
 trait CustomJsonProtocol {

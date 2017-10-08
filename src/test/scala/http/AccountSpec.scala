@@ -114,7 +114,34 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
   }
 
   "POST /withdraw" should {
-    "withdraw money from the account" in {
+    "return 404 if the account does not exist" in {
+
+      val response = Http("http://localhost:8080/withdraw")
+        .header("Content-Type","application/json")
+        .postData(WithdrawRequest("111",50).toJson.toString())
+        .asString
+
+      response.code shouldBe 404
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+
+    }
+
+    "return 400 if the amount is bigger then the balance" in {
+      val acc = BankAccount("123", 50)
+      server.service.db.put(acc.id, acc)
+
+      val response = Http("http://localhost:8080/withdraw")
+        .header("Content-Type","application/json")
+        .postData(WithdrawRequest(acc.id,100).toJson.toString())
+        .asString
+
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe InsufficientFund().err_msg
+    }
+
+    "return 200 if the withdraw is permitted" in {
 
       val acc = BankAccount("123", 200)
       server.service.db.put(acc.id, acc)
@@ -127,6 +154,50 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount("123",150)
+    }
+
+  }
+
+  "Post on /deposit" should {
+    "return 404 if account not found" in {
+      val response = Http("http://localhost:8080/deposit")
+        .header("Content-Type","application/json")
+        .postData(DepositRequest("111",50).toJson.toString())
+        .asString
+
+      response.code shouldBe 404
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+
+    }
+
+    "return 400 if the amount is negative" in {
+      val acc = BankAccount("123", 200)
+      server.service.db.put(acc.id, acc)
+
+      val response = Http("http://localhost:8080/deposit")
+        .header("Content-Type","application/json")
+        .postData(DepositRequest(acc.id,-50).toJson.toString())
+        .asString
+
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AmountNotValid().err_msg
+
+    }
+
+    "return 200 if the deposit is possible" in {
+      val acc = BankAccount("123", 200)
+      server.service.db.put(acc.id, acc)
+
+      val response = Http("http://localhost:8080/deposit")
+        .header("Content-Type","application/json")
+        .postData(DepositRequest(acc.id,50).toJson.toString())
+        .asString
+
+      response.code shouldBe 200
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount("123",250)
     }
   }
 

@@ -9,6 +9,7 @@ case class BankAccount(id: String = "", balance: BigDecimal = 0) extends Account
 
 abstract class Request
 case class WithdrawRequest(from: String, amount: BigDecimal ) extends Request
+case class DepositRequest(to: String, amount: BigDecimal ) extends Request
 case class TransferRequest(from: String, to: String, amount: BigDecimal) extends Request
 
 case class ErrorResponse(error: Error)
@@ -19,8 +20,8 @@ trait Error {
 
 case class InsufficientFund(override val err_msg: String = "Insufficient Fund") extends Error
 case class AccountNotFound(override val err_msg: String = "Account not found") extends Error
+case class AmountNotValid(override val err_msg: String = "The amount value is not valid") extends Error
 case class InternalError(override val err_msg: String = "Internal Error") extends Error
-
 
 
 
@@ -39,17 +40,34 @@ trait AccountService {
     }
   }
 
-  def withdraw(withdrawRequest: WithdrawRequest): Either[InsufficientFund, BankAccount] = db.synchronized {
-    val account = db(withdrawRequest.from)
-    val new_balance = account.balance - withdrawRequest.amount
-    new_balance match {
-      case x if x >=0 => {
-        val copy = account.copy(balance = new_balance)
-        db.put(account.id, copy)
-        Right(copy)
+  def withdraw(withdrawRequest: WithdrawRequest): Either[Error, BankAccount] = db.synchronized {
+    db.get(withdrawRequest.from) match {
+      case Some(account) => {
+        account.balance - withdrawRequest.amount match {
+          case (new_balance) if new_balance >= 0 => {
+            val copy = account.copy(balance = new_balance)
+            db.put(account.id, copy)
+            Right(copy)
+          }
+          case _ => Left(InsufficientFund())
+        }
       }
-      case _ => Left(InsufficientFund())
+      case _ => Left(AccountNotFound())
     }
+  }
+
+  def deposit(depositRequest: DepositRequest)= {
+    if(depositRequest.amount >= 0) {
+      db.get(depositRequest.to) match {
+        case Some(account) => {
+          val copy = account.copy(balance = account.balance + depositRequest.amount)
+          db.put(account.id, copy)
+          Right(copy)
+        }
+        case _ => Left(AccountNotFound())
+      }
+    } else
+      Left(AmountNotValid())
   }
 
   def transfer(transferRequest: TransferRequest): Either[Error, Option[BankAccount]] = db.synchronized {

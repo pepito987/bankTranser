@@ -52,6 +52,8 @@ class Server extends JsonSupport {
           entity(as[WithdrawRequest]) { withdrawRequest =>
             service.withdraw(withdrawRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
+              case Left(err:InsufficientFund) => complete(StatusCodes.BadRequest, ErrorResponse(err))
+              case Left(err:AccountNotFound) => complete(StatusCodes.NotFound, ErrorResponse(err))
               case Left(err) => complete(StatusCodes.InternalServerError, ErrorResponse(err))
             }
           }
@@ -66,7 +68,18 @@ class Server extends JsonSupport {
             }
           }
         }
+      } ~
+    pathPrefix("deposit") {
+      post {
+        entity(as[DepositRequest]) { depositRequest =>
+          service.deposit(depositRequest) match {
+            case Right(account) => complete(StatusCodes.OK, account)
+            case Left(error:AccountNotFound) => complete(StatusCodes.NotFound,ErrorResponse(error))
+            case Left(error:AmountNotValid) => complete(StatusCodes.BadRequest,ErrorResponse(error))
+          }
+        }
       }
+    }
   }
 
 

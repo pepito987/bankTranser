@@ -40,7 +40,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe RequestNotValid().errorMessage
     }
 
     "return 400 if the from account does not exist" in {
@@ -59,7 +59,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
     "return 400 if the dst account does not exist" in {
@@ -78,7 +78,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
     "return 400 if both account don't not exist" in {
@@ -95,7 +95,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
     "return 400 if the amount is bigger than the balance and will not update the accounts" in {
@@ -115,7 +115,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe InsufficientFund().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe InsufficientFund().errorMessage
 
       server.service.db.get(from.id).get shouldBe from
       server.service.db.get(to.id).get shouldBe to
@@ -138,7 +138,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount(from, 200)
+      response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount(from, 150)
       val fromAcc = server.service.db(from)
       val toAcc = server.service.db(to)
 

@@ -1,5 +1,7 @@
 package http
 
+import java.util.concurrent.ConcurrentHashMap
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
@@ -8,7 +10,7 @@ import akka.http.scaladsl.server.{MalformedRequestContentRejection, RejectionHan
 import akka.stream.ActorMaterializer
 import services._
 
-import scala.collection.mutable
+import collection.JavaConverters._
 
 class Server extends JsonSupport {
 
@@ -19,12 +21,12 @@ class Server extends JsonSupport {
 
   //  var db = Map.empty[String,BankAccount]
   val service = new AccountService {
-    override val db: mutable.Map[String, BankAccount] = mutable.Map.empty
+    override val db = new ConcurrentHashMap[String,BankAccount]().asScala
   }
 
   val regectionHandler = RejectionHandler.newBuilder()
     //    .handleNotFound { complete((StatusCodes.NotFound, "Oh man, what you are looking for is long gone.")) }
-    .handle { case MalformedRequestContentRejection(msg, _) => complete((StatusCodes.InternalServerError, InternalError(msg))) }
+    .handle { case MalformedRequestContentRejection(msg, _) => complete((StatusCodes.BadRequest, ErrorResponse(RequestNotValid()))) }
     .result()
 
   val route = handleRejections(regectionHandler) {
@@ -33,18 +35,17 @@ class Server extends JsonSupport {
         path(IntNumber) { id =>
           service.get(s"$id") match {
             case Right(x) => complete(StatusCodes.OK, x)
-            case Left(y) => complete(StatusCodes.NotFound, ErrorResponse(y))
+            case Left(y) => complete(StatusCodes.NotFound, Response(Some(y)))
           }
         } ~
           pathEnd {
-            complete(StatusCodes.NotImplemented, InternalError())
+            complete(StatusCodes.NotImplemented, RequestNotValid())
           }
       } ~
         post {
-          service.create() match {
-            case Some(x) => complete(StatusCodes.Created, x)
-            case _ => complete(StatusCodes.InternalServerError, ErrorResponse(InternalError()))
-          }
+          service.create()
+            .map(x => complete(StatusCodes.Created, x))
+            .getOrElse(complete(StatusCodes.InternalServerError, ErrorResponse(RequestNotValid())))
         }
     } ~
       pathPrefix("withdraw") {
@@ -53,6 +54,7 @@ class Server extends JsonSupport {
             service.withdraw(withdrawRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
               case Left(err:InsufficientFund) => complete(StatusCodes.BadRequest, ErrorResponse(err))
+              case Left(err:AmountNotValid) => complete(StatusCodes.BadRequest, ErrorResponse(err))
               case Left(err:AccountNotFound) => complete(StatusCodes.NotFound, ErrorResponse(err))
               case Left(err) => complete(StatusCodes.InternalServerError, ErrorResponse(err))
             }

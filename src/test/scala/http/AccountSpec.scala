@@ -27,28 +27,6 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     Await.ready(server.stop, Duration.Inf)
   }
 
-//  "GET on /accounts " should {
-//    "return an empty account list" in {
-//
-//      val response = Http("http://localhost:8080/accounts").asString
-//
-//      response.code shouldBe 200
-//      response.header("Content-Type") shouldBe Some("application/json")
-//      response.body.parseJson shouldBe JsArray.empty
-//    }
-//
-//    "return a json with a string" in {
-//      val acc = BankAccount("111",200)
-//      server.service.db.put(acc.id, acc)
-//
-//      val response = Http("http://localhost:8080/accounts").asString
-//
-//      response.code shouldBe 200
-//      response.header("Content-Type") shouldBe Some("application/json")
-//      response.body.parseJson shouldBe List(acc.id).toJson
-//    }
-//  }
-
   "GET /account/{id} " should {
     "return 404 if the account with {id} doesn't exist " in {
 
@@ -58,6 +36,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[Response].error.get.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
     "return 200 if the account with {id} exist " in {
@@ -79,7 +58,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
   }
@@ -123,7 +102,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
 
     }
 
@@ -138,7 +117,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe InsufficientFund().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe InsufficientFund().errorMessage
     }
 
     "return 200 if the withdraw is permitted" in {
@@ -156,6 +135,21 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount("123",150)
     }
 
+    "return 400 if the amount is negative" in {
+      val acc = BankAccount("123", 50)
+      server.service.db.put(acc.id, acc)
+
+      val response = Http("http://localhost:8080/withdraw")
+        .header("Content-Type","application/json")
+        .postData(WithdrawRequest(acc.id,-100).toJson.toString())
+        .asString
+
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AmountNotValid().errorMessage
+
+    }
+
   }
 
   "Post on /deposit" should {
@@ -167,7 +161,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AccountNotFound().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
 
     }
 
@@ -182,7 +176,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.err_msg shouldBe AmountNotValid().err_msg
+      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AmountNotValid().errorMessage
 
     }
 

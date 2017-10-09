@@ -1,7 +1,8 @@
 package services
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json.{pimpAny, _}
+import spray.json.{JsObject, pimpAny, _}
+import DefaultJsonProtocol._
 
 trait JsonSupport extends SprayJsonSupport with CustomJsonProtocol{
   import DefaultJsonProtocol._
@@ -13,19 +14,20 @@ trait JsonSupport extends SprayJsonSupport with CustomJsonProtocol{
 
   implicit val insufficientFundFormat = jsonFormat1(InsufficientFund)
   implicit val accountNotFoundFormat = jsonFormat1(AccountNotFound)
-  implicit val internalErrorFormat = jsonFormat1(InternalError)
+  implicit val internalErrorFormat = jsonFormat1(RequestNotValid)
   implicit val amountNotValidFormat = jsonFormat1(AmountNotValid)
 }
 
 trait CustomJsonProtocol {
   import DefaultJsonProtocol._
+
   implicit object ErrorJsonFormat extends RootJsonFormat[Error] {
-    def write(c: Error) = JsObject(("err_msg",c.err_msg.toJson))
+    def write(c: Error) = JsObject(("err_msg",c.errorMessage.toJson))
 
     def read(value: JsValue) = {
       value.asJsObject.getFields("err_msg") match {
         case Seq(JsString(x)) => new Error {
-          override def err_msg: String =  x
+          override def errorMessage: String =  x
         }
       }
     }
@@ -36,7 +38,21 @@ trait CustomJsonProtocol {
 
     def read(value: JsValue) = {
       value.asJsObject.getFields("error") match {
-        case Seq(JsObject(x)) => new ErrorResponse(JsObject(x).convertTo[Error])
+        case Seq(JsObject(x)) => ErrorResponse(JsObject(x).convertTo[Error])
+      }
+    }
+  }
+
+  implicit object ResponseJsonFormat extends RootJsonFormat[Response] {
+    def write(c: Response) = c.error.map{ error =>
+      JsObject(("error",error.toJson))
+    }.getOrElse(JsObject())
+
+    def read(value: JsValue) = {
+      value.asJsObject.getFields("error") match {
+        case Seq(JsObject(x)) => {
+          Response(Some(JsObject(x).convertTo[Error]))
+        }
       }
     }
   }

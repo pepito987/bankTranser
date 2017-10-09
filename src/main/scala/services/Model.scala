@@ -1,22 +1,20 @@
 package services
 
+case class BankAccount(id: String = "", balance: BigDecimal = 0)
 
-//trait AccountOperations {
-//  implicit class AccountWithOperations(account: BankAccount) {
-//    def withdraw(amount: BigDecimal): BigDecimal = {
-//      val new_balance = account.balance - amount
-//      if(new_balance >= 0){
-//        db = db.updated(account.id, account.copy(balance = new_balance ))
-//        amount
-//      } else
-//        0
-//    }
-//  }
-//  implicit class Peppe(b: BigDecimal) {
-//    def transferTo(account: BankAccount): Unit ={
-//      db = db.updated(account.id,account.copy(balance = account.balance + b))
-//
-//    }
-//
-//  }
-//}
+case class WithdrawRequest(from: String, amount: BigDecimal )
+case class DepositRequest(to: String, amount: BigDecimal )
+case class TransferRequest(from: String, to: String, amount: BigDecimal)
+
+case class ErrorResponse(error: Error)
+
+case class Response(error: Option[Error])
+
+trait Error {
+  def errorMessage: String
+}
+
+case class InsufficientFund(override val errorMessage: String = "Insufficient Fund") extends Error
+case class AccountNotFound(override val errorMessage: String = "Account not found") extends Error
+case class AmountNotValid(override val errorMessage: String = "The amount value is not valid") extends Error
+case class RequestNotValid(override val errorMessage: String = "The request is not valid") extends Error

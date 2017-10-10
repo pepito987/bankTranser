@@ -65,7 +65,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
   "GET /account " should {
 
-    "return 501  " in {
+    "return 501 if empty request " in {
       val response = Http("http://localhost:8080/account")
         .header("Content-Type","application/json")
         .asString

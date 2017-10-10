@@ -64,7 +64,8 @@ class Server extends JsonSupport {
           entity(as[TransferRequest]) { transferRequest =>
             service.transfer(transferRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
-              case Left(err) => complete(StatusCodes.BadRequest, ErrorResponse(err))
+              case Left(err:AccountNotFound) => complete(StatusCodes.NotFound, ErrorResponse(err))
+              case Left(err:InsufficientFund) => complete(StatusCodes.BadRequest, ErrorResponse(err))
             }
           }
         }

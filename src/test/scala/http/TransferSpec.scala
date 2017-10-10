@@ -43,7 +43,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe RequestNotValid().errorMessage
     }
 
-    "return 400 if the from account does not exist" in {
+    "return 404 if the from account does not exist" in {
 
       val from = "123"
       val to = "987"
@@ -57,12 +57,12 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
           TransferRequest(from, to, amount).toJson.toString()
         ).asString
 
-      response.code shouldBe 400
+      response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
-    "return 400 if the dst account does not exist" in {
+    "return 404 if the dst account does not exist" in {
 
       val from = "123"
       val to = "987"
@@ -76,24 +76,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
           TransferRequest(from, to, amount).toJson.toString()
         ).asString
 
-      response.code shouldBe 400
-      response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
-    }
-
-    "return 400 if both account don't not exist" in {
-
-      val from = "123"
-      val to = "987"
-      val amount = 50
-
-      val response = Http("http://localhost:8080/transfer")
-        .header("Content-Type", "application/json")
-        .postData(
-          TransferRequest(from, to, amount).toJson.toString()
-        ).asString
-
-      response.code shouldBe 400
+      response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
@@ -117,8 +100,8 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe InsufficientFund().errorMessage
 
-      server.service.db.get(from.id).get shouldBe from
-      server.service.db.get(to.id).get shouldBe to
+      server.service.db(from.id) shouldBe from
+      server.service.db(to.id) shouldBe to
     }
 
     "return 200 and the balance reflect the transfer" in {

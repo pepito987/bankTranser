@@ -77,8 +77,6 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
   "Post /account " should {
     "Create a new account" in {
-      val balance = BigDecimal(200)
-
       val response = Http("http://localhost:8080/account")
         .header("Content-Type","application/json")
         .postData("")
@@ -86,8 +84,8 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 201
       response.header("Content-Type").get shouldBe "application/json"
-      val id = response.body.parseJson.convertTo[String]
-      server.service.db.contains(id) shouldBe true
+      val account = response.body.parseJson.convertTo[BankAccount]
+      server.service.db.contains(account.id) shouldBe true
     }
 
   }

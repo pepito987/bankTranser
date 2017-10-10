@@ -6,11 +6,11 @@ import java.util.UUID
 trait AccountService {
   val db: scala.collection.concurrent.Map[String,BankAccount]
 
-  def create(): Option[String] = db.synchronized {
+  def create(): BankAccount = db.synchronized {
     val id = UUID.randomUUID().toString
-    db.putIfAbsent(id,BankAccount(id = id))
-      .flatMap(x => Some(x.id))
-      .orElse(Some(id))
+    val account = BankAccount(id = id)
+    db.putIfAbsent(id,account)
+      .getOrElse(account)
   }
 
   def get(id: String): Either[AccountNotFound, BankAccount] = {

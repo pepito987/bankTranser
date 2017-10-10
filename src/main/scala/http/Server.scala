@@ -43,9 +43,7 @@ class Server extends JsonSupport {
           }
       } ~
         post {
-          service.create()
-            .map(x => complete(StatusCodes.Created, x))
-            .getOrElse(complete(StatusCodes.InternalServerError, ErrorResponse(RequestNotValid())))
+         complete(StatusCodes.Created,  service.create())
         }
     } ~
       pathPrefix("withdraw") {

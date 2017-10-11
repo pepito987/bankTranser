@@ -7,14 +7,15 @@ case class Withdraw(from: String, amount: BigDecimal ) extends TransactionReques
 case class Deposit(to: String, amount: BigDecimal ) extends TransactionRequest
 case class Transfer(from: String, to: String, amount: BigDecimal) extends TransactionRequest
 
+case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class ErrorResponse(error: Error)
+
+case class SuccessTransaction(id: String, request: TransactionRequest, balance: BigDecimal)
+case class FailedTransaction(id: String, request: TransactionRequest, error: Error)
 
 case class Response(error: Option[Error])
 
-case class Transaction(id: String, request: Transfer, status: TransactionStatus)
-
 trait TransactionStatus
-case object ValidTransaction extends TransactionStatus
 case class FailedWithdraw(error: Error) extends TransactionStatus
 case class FailedDeposit(error: Error) extends TransactionStatus
 

@@ -38,21 +38,30 @@ trait AccountService {
 //    transactionsDB.put(transactionId,Transaction(transactionId,request,status))
 //  }
 
-  def withdraw(withdrawRequest: Withdraw): Either[Error, BankAccount] = {
+  def withdraw(withdrawRequest: Withdraw) = {
     if (withdrawRequest.amount < 0)
       Left(AmountNotValid())
-    else
-      execDeposit(withdrawRequest.from, -withdrawRequest.amount)
+    else{
+      execDeposit(withdrawRequest.from, -withdrawRequest.amount) match {
+        case Right(account) => Right(SuccessTransaction(UUID.randomUUID().toString,withdrawRequest,account.balance))
+        case Left(err) => Left(err)
+      }
+    }
   }
 
-  def deposit(depositRequest: Deposit): Either[Error, BankAccount] = {
+  def deposit(depositRequest: Deposit)= {
     if (depositRequest.amount < 0)
       Left(AmountNotValid())
-    else
-      execDeposit(depositRequest.to, depositRequest.amount)
+    else{
+      execDeposit(depositRequest.to, depositRequest.amount) match {
+        case Right(account) => Right(SuccessTransaction(UUID.randomUUID().toString,depositRequest,account.balance))
+        case Left(err) => Left(err)
+      }
+
+    }
   }
 
-  def transfer(transferRequest: Transfer): Either[Error, BankAccount] = {
+  def transfer(transferRequest: Transfer) = {
 
     def doWithdraw(transferRequest: Transfer) = {
       execDeposit(transferRequest.from, -transferRequest.amount)
@@ -74,16 +83,13 @@ trait AccountService {
     failOrAccount match {
       case Left(err: FailedDeposit) => {
         doRollback(transferRequest)
-//        storeTransaction(transferRequest,err)
         Left(err.error)
       }
       case Left(err: FailedWithdraw) =>{
-//        storeTransaction(transferRequest,err)
         Left(err.error)
       }
       case Right(account) =>{
-//        storeTransaction(transferRequest,ValidTransaction)
-        Right(account)
+        Right(SuccessTransactionResponse(UUID.randomUUID().toString,account.balance))
       }
     }
 

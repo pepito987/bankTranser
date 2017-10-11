@@ -1,6 +1,6 @@
 package http
 
-import services._
+import services.{BankAccount, _}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.ActorMaterializer
@@ -130,7 +130,22 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount("123",150)
+      val body = response.body.parseJson.convertTo[SuccessTransactionResponse]
+      body.balance shouldBe 150
+    }
+
+    "return a transaction id if valid withdraw" in {
+      val acc = BankAccount("123", 200)
+      server.service.accountsDB.put(acc.id, acc)
+
+      val response = Http("http://localhost:8080/withdraw")
+        .header("Content-Type","application/json")
+        .postData(Withdraw(acc.id,50).toJson.toString())
+        .asString
+
+      response.code shouldBe 200
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[SuccessTransactionResponse].id.length should be >0
     }
 
     "return 400 if the amount is negative" in {
@@ -189,7 +204,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount("123",250)
+      response.body.parseJson.convertTo[SuccessTransactionResponse].balance shouldBe 250
     }
   }
 

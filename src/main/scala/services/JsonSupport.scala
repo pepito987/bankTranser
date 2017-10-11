@@ -16,6 +16,7 @@ trait JsonSupport extends SprayJsonSupport with CustomJsonProtocol{
   implicit val accountNotFoundFormat = jsonFormat1(AccountNotFound)
   implicit val internalErrorFormat = jsonFormat1(RequestNotValid)
   implicit val amountNotValidFormat = jsonFormat1(AmountNotValid)
+  implicit val successTransactionResponseFormat = jsonFormat2(SuccessTransactionResponse)
 }
 
 trait CustomJsonProtocol {

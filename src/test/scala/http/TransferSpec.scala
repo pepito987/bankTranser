@@ -139,7 +139,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount(from, 150)
+      response.body.parseJson.convertTo[SuccessTransactionResponse].balance shouldBe 150
       val fromAcc = server.service.accountsDB(from)
       val toAcc = server.service.accountsDB(to)
 

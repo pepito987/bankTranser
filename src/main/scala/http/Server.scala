@@ -50,7 +50,7 @@ class Server extends JsonSupport {
         post {
           entity(as[Withdraw]) { withdrawRequest =>
             service.withdraw(withdrawRequest) match {
-              case Right(acc) => complete(StatusCodes.OK, acc)
+              case Right(tx) => complete(StatusCodes.OK, SuccessTransactionResponse(tx.id, tx.balance))
               case Left(err:InsufficientFund) => complete(StatusCodes.BadRequest, ErrorResponse(err))
               case Left(err:AmountNotValid) => complete(StatusCodes.BadRequest, ErrorResponse(err))
               case Left(err:AccountNotFound) => complete(StatusCodes.NotFound, ErrorResponse(err))
@@ -63,7 +63,7 @@ class Server extends JsonSupport {
         post {
           entity(as[Transfer]) { transferRequest =>
             service.transfer(transferRequest) match {
-              case Right(acc) => complete(StatusCodes.OK, acc)
+              case Right(tx) => complete(StatusCodes.OK, SuccessTransactionResponse(tx.id,tx.balance))
               case Left(err:AccountNotFound) => complete(StatusCodes.NotFound, ErrorResponse(err))
               case Left(err:InsufficientFund) => complete(StatusCodes.BadRequest, ErrorResponse(err))
             }
@@ -74,7 +74,7 @@ class Server extends JsonSupport {
       post {
         entity(as[Deposit]) { depositRequest =>
           service.deposit(depositRequest) match {
-            case Right(account) => complete(StatusCodes.OK, account)
+            case Right(tx) => complete(StatusCodes.OK, SuccessTransactionResponse(tx.id,tx.balance))
             case Left(error:AccountNotFound) => complete(StatusCodes.NotFound,ErrorResponse(error))
             case Left(error:AmountNotValid) => complete(StatusCodes.BadRequest,ErrorResponse(error))
           }

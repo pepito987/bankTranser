@@ -49,7 +49,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       val to = "987"
       val amount = 50
 
-      server.service.db.put(to, BankAccount(to, 200))
+      server.service.accountsDB.put(to, BankAccount(to, 200))
 
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
@@ -63,12 +63,11 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
     }
 
     "return 404 if the dst account does not exist" in {
-
       val from = "123"
       val to = "987"
       val amount = 50
 
-      server.service.db.put(from, BankAccount(from, 200))
+      server.service.accountsDB.put(from, BankAccount(from, 200))
 
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
@@ -81,14 +80,33 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
+    "rollback if the deposit on a transaction fails" in {
+      val from = "123"
+      val to = "987"
+      val amount = 50
+
+      server.service.accountsDB.put(from, BankAccount(from, 200))
+
+      val response = Http("http://localhost:8080/transfer")
+        .header("Content-Type", "application/json")
+        .postData(
+          TransferRequest(from, to, amount).toJson.toString()
+        ).asString
+
+      response.code shouldBe 404
+
+      server.service.accountsDB(from).balance shouldBe 200
+
+    }
+
     "return 400 if the amount is bigger than the balance and will not update the accounts" in {
 
       val amount = 500
       val from = BankAccount("123", 200)
       val to = BankAccount("987", 200)
 
-      server.service.db.put(from.id, from)
-      server.service.db.put(to.id, to)
+      server.service.accountsDB.put(from.id, from)
+      server.service.accountsDB.put(to.id, to)
 
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
@@ -100,8 +118,8 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe InsufficientFund().errorMessage
 
-      server.service.db(from.id) shouldBe from
-      server.service.db(to.id) shouldBe to
+      server.service.accountsDB(from.id) shouldBe from
+      server.service.accountsDB(to.id) shouldBe to
     }
 
     "return 200 and the balance reflect the transfer" in {
@@ -110,8 +128,8 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       val to = "987"
       val amount = 50
 
-      server.service.db.put(from, BankAccount(from, 200))
-      server.service.db.put(to, BankAccount(to, 200))
+      server.service.accountsDB.put(from, BankAccount(from, 200))
+      server.service.accountsDB.put(to, BankAccount(to, 200))
 
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
@@ -122,8 +140,8 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[BankAccount] shouldBe BankAccount(from, 150)
-      val fromAcc = server.service.db(from)
-      val toAcc = server.service.db(to)
+      val fromAcc = server.service.accountsDB(from)
+      val toAcc = server.service.accountsDB(to)
 
       fromAcc.balance shouldBe 150
       toAcc.balance shouldBe 250
@@ -132,9 +150,9 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
     "handle concurrency" in {
 
       for( _ <- 1 until 200) {
-        server.service.db.put("bob", BankAccount("bob", 200))
-        server.service.db.put("alice", BankAccount("alice", 200))
-        server.service.db.put("john", BankAccount("john", 200))
+        server.service.accountsDB.put("bob", BankAccount("bob", 200))
+        server.service.accountsDB.put("alice", BankAccount("alice", 200))
+        server.service.accountsDB.put("john", BankAccount("john", 200))
 
         val requests = scala.util.Random.shuffle(List(
           TransferRequest("bob", "alice", 50),
@@ -153,9 +171,9 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
           response.header("Content-Type").get shouldBe "application/json"
         })
 
-        server.service.db("alice").balance shouldBe 200
-        server.service.db("bob").balance shouldBe 150
-        server.service.db("john").balance shouldBe 250
+        server.service.accountsDB("alice").balance shouldBe 200
+        server.service.accountsDB("bob").balance shouldBe 150
+        server.service.accountsDB("john").balance shouldBe 250
       }
 
     }

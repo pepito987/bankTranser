@@ -41,7 +41,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
     "return 200 if the account with {id} exist " in {
       val acc = BankAccount("111", 200)
-      server.service.db.put(acc.id, acc)
+      server.service.accountsDB.put(acc.id, acc)
       val response = Http(s"http://localhost:8080/account/${acc.id}")
         .header("Content-Type","application/json")
         .asString
@@ -85,7 +85,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       response.code shouldBe 201
       response.header("Content-Type").get shouldBe "application/json"
       val account = response.body.parseJson.convertTo[BankAccount]
-      server.service.db.contains(account.id) shouldBe true
+      server.service.accountsDB.contains(account.id) shouldBe true
     }
 
   }
@@ -106,7 +106,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
     "return 400 if the amount is bigger then the balance" in {
       val acc = BankAccount("123", 50)
-      server.service.db.put(acc.id, acc)
+      server.service.accountsDB.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/withdraw")
         .header("Content-Type","application/json")
@@ -121,7 +121,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     "return 200 if the withdraw is permitted" in {
 
       val acc = BankAccount("123", 200)
-      server.service.db.put(acc.id, acc)
+      server.service.accountsDB.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/withdraw")
         .header("Content-Type","application/json")
@@ -135,7 +135,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
     "return 400 if the amount is negative" in {
       val acc = BankAccount("123", 50)
-      server.service.db.put(acc.id, acc)
+      server.service.accountsDB.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/withdraw")
         .header("Content-Type","application/json")
@@ -165,7 +165,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
     "return 400 if the amount is negative" in {
       val acc = BankAccount("123", 200)
-      server.service.db.put(acc.id, acc)
+      server.service.accountsDB.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/deposit")
         .header("Content-Type","application/json")
@@ -180,7 +180,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
     "return 200 if the deposit is possible" in {
       val acc = BankAccount("123", 200)
-      server.service.db.put(acc.id, acc)
+      server.service.accountsDB.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/deposit")
         .header("Content-Type","application/json")

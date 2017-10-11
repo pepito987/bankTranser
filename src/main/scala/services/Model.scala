@@ -10,6 +10,13 @@ case class ErrorResponse(error: Error)
 
 case class Response(error: Option[Error])
 
+case class Transaction(id: String, request: TransferRequest, status: TransactionStatus)
+
+trait TransactionStatus
+case object ValidTransaction extends TransactionStatus
+case class FailedWithdraw(error: Error) extends TransactionStatus
+case class FailedDeposit(error: Error) extends TransactionStatus
+
 trait Error {
   def errorMessage: String
 }

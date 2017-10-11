@@ -1,56 +1,94 @@
 package services
 
 import java.util.UUID
+import services.TransactionStatus
 
 
 trait AccountService {
-  val db: scala.collection.concurrent.Map[String,BankAccount]
+  val accountsDB: scala.collection.concurrent.Map[String, BankAccount]
+//  val transactionsDB: scala.collection.concurrent.Map[String, Transaction]
 
-  def create(): BankAccount = db.synchronized {
+  def create(): BankAccount = accountsDB.synchronized {
     val id = UUID.randomUUID().toString
     val account = BankAccount(id = id)
-    db.putIfAbsent(id,account)
+    accountsDB.putIfAbsent(id, account)
       .getOrElse(account)
   }
 
   def get(id: String): Either[AccountNotFound, BankAccount] = {
-    db.get(id).toRight(AccountNotFound())
+    accountsDB.get(id).toRight(AccountNotFound())
   }
 
-  private def execDeposit(to: String, amount: BigDecimal) = {
+  private def execDeposit(to: String, amount: BigDecimal): Either[Error, BankAccount] = {
     //    this.synchronized{
-    db.get(to).map{ account =>
-      if(account.balance + amount < 0)
+    accountsDB.get(to).map { account =>
+      if (account.balance + amount < 0)
         Left(InsufficientFund())
-      else{
+      else {
         val copy = account.copy(balance = account.balance + amount)
-        db.put(to,copy)
+        accountsDB.put(to, copy)
         Right(copy)
       }
     }.getOrElse(Left(AccountNotFound()))
     //    }
   }
 
+//  private def storeTransaction(request: TransferRequest, status: TransactionStatus) = {
+//    val transactionId = UUID.randomUUID().toString
+//    transactionsDB.put(transactionId,Transaction(transactionId,request,status))
+//  }
+
   def withdraw(withdrawRequest: WithdrawRequest): Either[Error, BankAccount] = {
-    if(withdrawRequest.amount < 0)
+    if (withdrawRequest.amount < 0)
       Left(AmountNotValid())
     else
       execDeposit(withdrawRequest.from, -withdrawRequest.amount)
   }
 
   def deposit(depositRequest: DepositRequest): Either[Error, BankAccount] = {
-    if(depositRequest.amount < 0)
+    if (depositRequest.amount < 0)
       Left(AmountNotValid())
     else
-      execDeposit(depositRequest.to,depositRequest.amount)
+      execDeposit(depositRequest.to, depositRequest.amount)
   }
 
-  def transfer(transferRequest: TransferRequest): Either[Error, Option[BankAccount]] = {
-    for {
-      account <- execDeposit(transferRequest.from,-transferRequest.amount)
-      _ <- execDeposit(transferRequest.to,transferRequest.amount)
-    } yield Some(account)
+  def transfer(transferRequest: TransferRequest): Either[Error, BankAccount] = {
+
+    def doWithdraw(transferRequest: TransferRequest) = {
+      execDeposit(transferRequest.from, -transferRequest.amount)
+    }
+
+    def doDeposit(transferRequest: TransferRequest) = {
+      execDeposit(transferRequest.to, transferRequest.amount)
+    }
+
+    def doRollback(transferRequest: TransferRequest) = {
+      execDeposit(transferRequest.from, transferRequest.amount)
+    }
+
+    val failOrAccount = for {
+      updatedSrcAccount <- doWithdraw(transferRequest).left.map(err => FailedWithdraw(err))
+      _ <- doDeposit(transferRequest).left.map(err => FailedDeposit(err))
+    } yield updatedSrcAccount
+
+    failOrAccount match {
+      case Left(err: FailedDeposit) => {
+        doRollback(transferRequest)
+//        storeTransaction(transferRequest,err)
+        Left(err.error)
+      }
+      case Left(err: FailedWithdraw) =>{
+//        storeTransaction(transferRequest,err)
+        Left(err.error)
+      }
+      case Right(account) =>{
+//        storeTransaction(transferRequest,ValidTransaction)
+        Right(account)
+      }
+    }
 
   }
+
 }
+
 

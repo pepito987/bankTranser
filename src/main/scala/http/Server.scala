@@ -21,7 +21,7 @@ class Server extends JsonSupport {
 
   //  var db = Map.empty[String,BankAccount]
   val service = new AccountService {
-    override val db = new ConcurrentHashMap[String,BankAccount]().asScala
+    override val accountsDB = new ConcurrentHashMap[String,BankAccount]().asScala
   }
 
   val regectionHandler = RejectionHandler.newBuilder()

@@ -95,7 +95,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       val response = Http("http://localhost:8080/withdraw")
         .header("Content-Type","application/json")
-        .postData(WithdrawRequest("111",50).toJson.toString())
+        .postData(Withdraw("111",50).toJson.toString())
         .asString
 
       response.code shouldBe 404
@@ -110,7 +110,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       val response = Http("http://localhost:8080/withdraw")
         .header("Content-Type","application/json")
-        .postData(WithdrawRequest(acc.id,100).toJson.toString())
+        .postData(Withdraw(acc.id,100).toJson.toString())
         .asString
 
       response.code shouldBe 400
@@ -125,7 +125,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       val response = Http("http://localhost:8080/withdraw")
         .header("Content-Type","application/json")
-        .postData(WithdrawRequest(acc.id,50).toJson.toString())
+        .postData(Withdraw(acc.id,50).toJson.toString())
         .asString
 
       response.code shouldBe 200
@@ -139,7 +139,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       val response = Http("http://localhost:8080/withdraw")
         .header("Content-Type","application/json")
-        .postData(WithdrawRequest(acc.id,-100).toJson.toString())
+        .postData(Withdraw(acc.id,-100).toJson.toString())
         .asString
 
       response.code shouldBe 400
@@ -154,7 +154,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     "return 404 if account not found" in {
       val response = Http("http://localhost:8080/deposit")
         .header("Content-Type","application/json")
-        .postData(DepositRequest("111",50).toJson.toString())
+        .postData(Deposit("111",50).toJson.toString())
         .asString
 
       response.code shouldBe 404
@@ -169,7 +169,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       val response = Http("http://localhost:8080/deposit")
         .header("Content-Type","application/json")
-        .postData(DepositRequest(acc.id,-50).toJson.toString())
+        .postData(Deposit(acc.id,-50).toJson.toString())
         .asString
 
       response.code shouldBe 400
@@ -184,7 +184,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       val response = Http("http://localhost:8080/deposit")
         .header("Content-Type","application/json")
-        .postData(DepositRequest(acc.id,50).toJson.toString())
+        .postData(Deposit(acc.id,50).toJson.toString())
         .asString
 
       response.code shouldBe 200

@@ -48,7 +48,7 @@ class Server extends JsonSupport {
     } ~
       pathPrefix("withdraw") {
         post {
-          entity(as[WithdrawRequest]) { withdrawRequest =>
+          entity(as[Withdraw]) { withdrawRequest =>
             service.withdraw(withdrawRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
               case Left(err:InsufficientFund) => complete(StatusCodes.BadRequest, ErrorResponse(err))
@@ -61,7 +61,7 @@ class Server extends JsonSupport {
       } ~
       pathPrefix("transfer") {
         post {
-          entity(as[TransferRequest]) { transferRequest =>
+          entity(as[Transfer]) { transferRequest =>
             service.transfer(transferRequest) match {
               case Right(acc) => complete(StatusCodes.OK, acc)
               case Left(err:AccountNotFound) => complete(StatusCodes.NotFound, ErrorResponse(err))
@@ -72,7 +72,7 @@ class Server extends JsonSupport {
       } ~
     pathPrefix("deposit") {
       post {
-        entity(as[DepositRequest]) { depositRequest =>
+        entity(as[Deposit]) { depositRequest =>
           service.deposit(depositRequest) match {
             case Right(account) => complete(StatusCodes.OK, account)
             case Left(error:AccountNotFound) => complete(StatusCodes.NotFound,ErrorResponse(error))

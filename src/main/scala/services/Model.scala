@@ -2,15 +2,16 @@ package services
 
 case class BankAccount(id: String = "", balance: BigDecimal = 0)
 
-case class WithdrawRequest(from: String, amount: BigDecimal )
-case class DepositRequest(to: String, amount: BigDecimal )
-case class TransferRequest(from: String, to: String, amount: BigDecimal)
+trait TransactionRequest
+case class Withdraw(from: String, amount: BigDecimal ) extends TransactionRequest
+case class Deposit(to: String, amount: BigDecimal ) extends TransactionRequest
+case class Transfer(from: String, to: String, amount: BigDecimal) extends TransactionRequest
 
 case class ErrorResponse(error: Error)
 
 case class Response(error: Option[Error])
 
-case class Transaction(id: String, request: TransferRequest, status: TransactionStatus)
+case class Transaction(id: String, request: Transfer, status: TransactionStatus)
 
 trait TransactionStatus
 case object ValidTransaction extends TransactionStatus

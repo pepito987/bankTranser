@@ -38,31 +38,31 @@ trait AccountService {
 //    transactionsDB.put(transactionId,Transaction(transactionId,request,status))
 //  }
 
-  def withdraw(withdrawRequest: WithdrawRequest): Either[Error, BankAccount] = {
+  def withdraw(withdrawRequest: Withdraw): Either[Error, BankAccount] = {
     if (withdrawRequest.amount < 0)
       Left(AmountNotValid())
     else
       execDeposit(withdrawRequest.from, -withdrawRequest.amount)
   }
 
-  def deposit(depositRequest: DepositRequest): Either[Error, BankAccount] = {
+  def deposit(depositRequest: Deposit): Either[Error, BankAccount] = {
     if (depositRequest.amount < 0)
       Left(AmountNotValid())
     else
       execDeposit(depositRequest.to, depositRequest.amount)
   }
 
-  def transfer(transferRequest: TransferRequest): Either[Error, BankAccount] = {
+  def transfer(transferRequest: Transfer): Either[Error, BankAccount] = {
 
-    def doWithdraw(transferRequest: TransferRequest) = {
+    def doWithdraw(transferRequest: Transfer) = {
       execDeposit(transferRequest.from, -transferRequest.amount)
     }
 
-    def doDeposit(transferRequest: TransferRequest) = {
+    def doDeposit(transferRequest: Transfer) = {
       execDeposit(transferRequest.to, transferRequest.amount)
     }
 
-    def doRollback(transferRequest: TransferRequest) = {
+    def doRollback(transferRequest: Transfer) = {
       execDeposit(transferRequest.from, transferRequest.amount)
     }
 

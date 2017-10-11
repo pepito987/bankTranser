@@ -54,7 +54,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          TransferRequest(from, to, amount).toJson.toString()
+          Transfer(from, to, amount).toJson.toString()
         ).asString
 
       response.code shouldBe 404
@@ -72,7 +72,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          TransferRequest(from, to, amount).toJson.toString()
+          Transfer(from, to, amount).toJson.toString()
         ).asString
 
       response.code shouldBe 404
@@ -90,7 +90,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          TransferRequest(from, to, amount).toJson.toString()
+          Transfer(from, to, amount).toJson.toString()
         ).asString
 
       response.code shouldBe 404
@@ -111,7 +111,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          TransferRequest(from.id, to.id, amount).toJson.toString()
+          Transfer(from.id, to.id, amount).toJson.toString()
         ).asString
 
       response.code shouldBe 400
@@ -134,7 +134,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       val response = Http("http://localhost:8080/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          TransferRequest(from, to, amount).toJson.toString()
+          Transfer(from, to, amount).toJson.toString()
         ).asString
 
       response.code shouldBe 200
@@ -155,8 +155,8 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
         server.service.accountsDB.put("john", BankAccount("john", 200))
 
         val requests = scala.util.Random.shuffle(List(
-          TransferRequest("bob", "alice", 50),
-          TransferRequest("alice", "john", 50)))
+          Transfer("bob", "alice", 50),
+          Transfer("alice", "john", 50)))
 
         val responses = requests.map(r => Future {
           Http("http://localhost:8080/transfer")

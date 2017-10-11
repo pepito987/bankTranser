@@ -11,6 +11,7 @@ import akka.stream.ActorMaterializer
 import services._
 
 import collection.JavaConverters._
+import scala.collection.concurrent.Map
 
 class Server extends JsonSupport {
 
@@ -22,6 +23,7 @@ class Server extends JsonSupport {
   //  var db = Map.empty[String,BankAccount]
   val service = new AccountService {
     override val accountsDB = new ConcurrentHashMap[String,BankAccount]().asScala
+    override val transactionsDB = new ConcurrentHashMap[String,Transaction]().asScala
   }
 
   val regectionHandler = RejectionHandler.newBuilder()
@@ -35,7 +37,7 @@ class Server extends JsonSupport {
         path(IntNumber) { id =>
           service.get(s"$id") match {
             case Right(x) => complete(StatusCodes.OK, x)
-            case Left(y) => complete(StatusCodes.NotFound, Response(Some(y)))
+            case Left(y) => complete(StatusCodes.NotFound, ErrorResponse(y))
           }
         } ~
           pathEnd {

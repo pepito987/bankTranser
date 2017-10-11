@@ -10,10 +10,9 @@ case class Transfer(from: String, to: String, amount: BigDecimal) extends Transa
 case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class ErrorResponse(error: Error)
 
-case class SuccessTransaction(id: String, request: TransactionRequest, balance: BigDecimal)
-case class FailedTransaction(id: String, request: TransactionRequest, error: Error)
-
-case class Response(error: Option[Error])
+trait Transaction
+case class SuccessTransaction(id: String, request: TransactionRequest, balance: BigDecimal)extends Transaction
+case class FailedTransaction(id: String, request: TransactionRequest, error: Error) extends Transaction
 
 trait TransactionStatus
 case class FailedWithdraw(error: Error) extends TransactionStatus

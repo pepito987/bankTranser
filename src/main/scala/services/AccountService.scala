@@ -6,7 +6,7 @@ import services.TransactionStatus
 
 trait AccountService {
   val accountsDB: scala.collection.concurrent.Map[String, BankAccount]
-//  val transactionsDB: scala.collection.concurrent.Map[String, Transaction]
+  val transactionsDB: scala.collection.concurrent.Map[String, Transaction]
 
   def create(): BankAccount = accountsDB.synchronized {
     val id = UUID.randomUUID().toString
@@ -39,11 +39,19 @@ trait AccountService {
 //  }
 
   def withdraw(withdrawRequest: Withdraw) = {
-    if (withdrawRequest.amount < 0)
-      Left(AmountNotValid())
+    if (withdrawRequest.amount < 0){
+      val error = AmountNotValid()
+      val tx = FailedTransaction(UUID.randomUUID().toString,withdrawRequest,error)
+      transactionsDB.putIfAbsent(tx.id,tx)
+      Left(error)
+    }
     else{
       execDeposit(withdrawRequest.from, -withdrawRequest.amount) match {
-        case Right(account) => Right(SuccessTransaction(UUID.randomUUID().toString,withdrawRequest,account.balance))
+        case Right(account) =>{
+          val tx = SuccessTransaction(UUID.randomUUID().toString,withdrawRequest,account.balance)
+          transactionsDB.putIfAbsent(tx.id,tx)
+          Right(tx)
+        }
         case Left(err) => Left(err)
       }
     }
@@ -54,7 +62,11 @@ trait AccountService {
       Left(AmountNotValid())
     else{
       execDeposit(depositRequest.to, depositRequest.amount) match {
-        case Right(account) => Right(SuccessTransaction(UUID.randomUUID().toString,depositRequest,account.balance))
+        case Right(account) => {
+          val tx = SuccessTransaction(UUID.randomUUID().toString,depositRequest,account.balance)
+          transactionsDB.putIfAbsent(tx.id,tx)
+          Right(tx)
+        }
         case Left(err) => Left(err)
       }
 

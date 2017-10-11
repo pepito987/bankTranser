@@ -44,18 +44,4 @@ trait CustomJsonProtocol {
     }
   }
 
-  implicit object ResponseJsonFormat extends RootJsonFormat[Response] {
-    def write(c: Response) = c.error.map{ error =>
-      JsObject(("error",error.toJson))
-    }.getOrElse(JsObject())
-
-    def read(value: JsValue) = {
-      value.asJsObject.getFields("error") match {
-        case Seq(JsObject(x)) => {
-          Response(Some(JsObject(x).convertTo[Error]))
-        }
-      }
-    }
-  }
-
 }

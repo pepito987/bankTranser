@@ -30,8 +30,8 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
   "GET /account/{id} " should {
     "return 404 if the account with {id} doesn't exist " in {
 
-      val response = Http("http://localhost:8080/account/0000")
-        .header("Content-Type","application/json")
+      val response = Http("http://localhost:8080/account?id=0000")
+        .header("Content-Type","application/x-www-form-urlencoded")
         .asString
 
       response.code shouldBe 404
@@ -42,8 +42,8 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     "return 200 if the account with {id} exist " in {
       val acc = BankAccount("111", 200)
       server.service.accountsDB.put(acc.id, acc)
-      val response = Http(s"http://localhost:8080/account/${acc.id}")
-        .header("Content-Type","application/json")
+      val response = Http(s"http://localhost:8080/account?id=${acc.id}")
+        .header("Content-Type","application/x-www-form-urlencoded")
         .asString
 
       response.code shouldBe 200
@@ -52,8 +52,8 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     }
 
     "return error in json" in {
-      val response = Http("http://localhost:8080/account/0000")
-        .header("Content-Type","application/json")
+      val response = Http("http://localhost:8080/account?id=0000")
+        .header("Content-Type","application/x-www-form-urlencoded")
         .asString
 
       response.code shouldBe 404
@@ -61,18 +61,6 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
     }
 
-  }
-
-  "GET /account " should {
-
-    "return 501 if empty request " in {
-      val response = Http("http://localhost:8080/account")
-        .header("Content-Type","application/json")
-        .asString
-
-      response.code shouldBe 501
-      response.header("Content-Type").get shouldBe "application/json"
-    }
   }
 
   "Post /account " should {

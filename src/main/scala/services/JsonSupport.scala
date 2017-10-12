@@ -1,7 +1,7 @@
 package services
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json.{JsObject, pimpAny, _}
+import spray.json.{JsObject, JsString, pimpAny, _}
 import DefaultJsonProtocol._
 
 trait JsonSupport extends SprayJsonSupport with CustomJsonProtocol{
@@ -58,5 +58,29 @@ trait CustomJsonProtocol {
       }
     }
   }
+
+//  implicit object TransactionJsonFormat extends RootJsonFormat[Transaction] {
+//    def write(tx: Transaction) = tx match {
+//      case t: SuccessTransaction => JsObject(
+//        "id" -> JsString(t.id),
+//        "request" -> t.request.toJson,
+//        "balance" -> JsString(t.balance.toString())
+//      )
+//      case t: FailedTransaction => JsObject(
+//        "id" -> JsString(t.id),
+//        "request" -> t.request.toJson,
+//        "error" -> t.error.toJson
+//      )
+//    }
+//
+//    def read(value: JsValue) = {
+//      value.asJsObject.getFields("id","request","balance") match {
+//        case Seq(JsString(id),JsObject(reason),JsString(balance)) =>
+//          SuccessTransaction(id,JsObject(reason).convertTo[TransactionRequest],BigDecimal(balance))
+//        case Seq(JsString(id),JsObject(reason),JsObject(error)) =>
+//          FailedTransactionResponse(id,JsObject(reason).convertTo[Error])
+//      }
+//    }
+//  }
 
 }

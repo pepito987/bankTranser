@@ -36,8 +36,8 @@ class Server extends JsonSupport {
   val route = handleRejections(regectionHandler) {
     pathPrefix("account") {
       get {
-        path(IntNumber) { id =>
-          service.get(s"$id") match {
+        parameter('id.as[String]){ id =>
+          service.getAccount(s"$id") match {
             case Right(x) => complete(StatusCodes.OK, x)
             case Left(y) => complete(StatusCodes.NotFound, ErrorResponse(y))
           }
@@ -79,6 +79,17 @@ class Server extends JsonSupport {
                   case SuccessTransaction(id, _, balance) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
                   case FailedTransaction(id, _, error: AccountNotFound) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, error))
                   case FailedTransaction(id, _, error: AmountNotValid) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, error))
+                }
+              }
+            }
+          } ~
+          pathPrefix("tx") {
+            get {
+              parameter('id.as[String]){ id =>
+                service.getTransaction(id) match {
+                  case Right(tx: SuccessTransaction) => complete(StatusCodes.OK, s"${tx.id}, ${tx.balance}")
+                  case Right(tx: FailedTransaction) => complete(StatusCodes.OK, s"${tx.id}")
+                  case Left(x) => complete(StatusCodes.NotFound, ErrorResponse(x))
                 }
               }
             }

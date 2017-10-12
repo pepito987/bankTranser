@@ -28,3 +28,4 @@ case class InsufficientFund(override val errorMessage: String = "Insufficient Fu
 case class AccountNotFound(override val errorMessage: String = "Account not found") extends Error
 case class AmountNotValid(override val errorMessage: String = "The amount value is not valid") extends Error
 case class RequestNotValid(override val errorMessage: String = "The request is not valid") extends Error
+case class TransactionNotFound(override val errorMessage: String = "The the transaction does not exist") extends Error

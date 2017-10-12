@@ -1,5 +1,7 @@
 package http
 
+import java.util.UUID
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.concurrent.ScalaFutures
@@ -31,7 +33,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
     Await.ready(server.stop, Duration.Inf)
   }
 
-  "POST /transfer" should {
+  "POST /transaction/transfer" should {
     "return 400 if the body is empty and log the transaction" in {
 
       val response = Http("http://localhost:8080/transaction/transfer")
@@ -199,7 +201,22 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
         server.service.accountsDB("bob").balance shouldBe 150
         server.service.accountsDB("john").balance shouldBe 250
       }
+    }
+  }
+  "GET on /transaction/tx/{id} " should {
+    "return a transaction " in {
 
+      val uuid = UUID.randomUUID().toString
+      val tx = SuccessTransaction(uuid,Transfer("111", "222", 90),87)
+
+      server.service.transactionsDB.put(tx.id,tx)
+
+      val response = Http(s"http://localhost:8080/transaction/tx?id=${uuid}")
+        .header("Content-Type", "application/x-www-form-urlencoded").asString
+
+      response.code shouldBe 200
+//      response.header("Content-Type").get shouldBe "application/json"
+//      response.body.parseJson.convertTo[SuccessTransactionResponse].balance shouldBe 87
     }
   }
 

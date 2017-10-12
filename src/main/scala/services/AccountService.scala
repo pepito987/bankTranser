@@ -15,8 +15,12 @@ trait AccountService {
       .getOrElse(account)
   }
 
-  def get(id: String): Either[AccountNotFound, BankAccount] = {
+  def getAccount(id: String): Either[AccountNotFound, BankAccount] = {
     accountsDB.get(id).toRight(AccountNotFound())
+  }
+
+  def getTransaction(id:String) = {
+    transactionsDB.get(id).toRight(TransactionNotFound())
   }
 
   private def execDeposit(to: String, amount: BigDecimal): Either[Error, BankAccount] = {
@@ -106,8 +110,9 @@ trait AccountService {
         storeSuccessTransaction(transferRequest,account.balance)
       }
     }
-
   }
+
+
 
 }
 

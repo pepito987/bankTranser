@@ -44,4 +44,19 @@ trait CustomJsonProtocol {
     }
   }
 
+  implicit object FailedTransactionResponseJsonFormat extends RootJsonFormat[FailedTransactionResponse] {
+    def write(tx: FailedTransactionResponse) = {
+      JsObject(
+        "id" -> JsString(tx.id),
+        "reason" -> tx.reason.toJson
+      )
+    }
+
+    def read(value: JsValue) = {
+      value.asJsObject.getFields("id","reason") match {
+        case Seq(JsString(id),JsObject(reason)) => FailedTransactionResponse(id,JsObject(reason).convertTo[Error])
+      }
+    }
+  }
+
 }

@@ -8,15 +8,17 @@ case class Deposit(to: String, amount: BigDecimal ) extends TransactionRequest
 case class Transfer(from: String, to: String, amount: BigDecimal) extends TransactionRequest
 
 case class SuccessTransactionResponse(id:String, balance: BigDecimal)
+case class FailedTransactionResponse(id:String, reason: Error)
+
 case class ErrorResponse(error: Error)
 
 trait Transaction
-case class SuccessTransaction(id: String, request: TransactionRequest, balance: BigDecimal)extends Transaction
+case class SuccessTransaction(id:String, request: TransactionRequest, balance: BigDecimal)extends Transaction
 case class FailedTransaction(id: String, request: TransactionRequest, error: Error) extends Transaction
 
-trait TransactionStatus
-case class FailedWithdraw(error: Error) extends TransactionStatus
-case class FailedDeposit(error: Error) extends TransactionStatus
+trait TransferStatus
+case class FailedWithdraw(error: Error) extends TransferStatus
+case class FailedDeposit(error: Error) extends TransferStatus
 
 trait Error {
   def errorMessage: String

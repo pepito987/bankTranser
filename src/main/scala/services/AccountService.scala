@@ -1,7 +1,7 @@
 package services
 
 import java.util.UUID
-import services.TransactionStatus
+import services.TransferStatus
 
 
 trait AccountService {
@@ -33,47 +33,49 @@ trait AccountService {
     //    }
   }
 
-//  private def storeTransaction(request: TransferRequest, status: TransactionStatus) = {
-//    val transactionId = UUID.randomUUID().toString
-//    transactionsDB.put(transactionId,Transaction(transactionId,request,status))
-//  }
+  private def storeFailTransaction(request: TransactionRequest, error: Error) = {
+    val transaction = FailedTransaction(UUID.randomUUID().toString,request,error)
+    transactionsDB.putIfAbsent(transaction.id,transaction)
+    transaction
+  }
+
+  private def storeSuccessTransaction(request: TransactionRequest, balance: BigDecimal) = {
+    val transaction = SuccessTransaction(UUID.randomUUID().toString,request,balance)
+    transactionsDB.putIfAbsent(transaction.id,transaction)
+    transaction
+  }
 
   def withdraw(withdrawRequest: Withdraw) = {
     if (withdrawRequest.amount < 0){
-      val error = AmountNotValid()
-      val tx = FailedTransaction(UUID.randomUUID().toString,withdrawRequest,error)
-      transactionsDB.putIfAbsent(tx.id,tx)
-      Left(error)
+      storeFailTransaction(withdrawRequest,AmountNotValid())
     }
     else{
       execDeposit(withdrawRequest.from, -withdrawRequest.amount) match {
         case Right(account) =>{
-          val tx = SuccessTransaction(UUID.randomUUID().toString,withdrawRequest,account.balance)
-          transactionsDB.putIfAbsent(tx.id,tx)
-          Right(tx)
+          storeSuccessTransaction(withdrawRequest,account.balance)
         }
-        case Left(err) => Left(err)
+        case Left(error) => {
+         storeFailTransaction(withdrawRequest,error)
+        }
       }
     }
   }
 
   def deposit(depositRequest: Deposit)= {
     if (depositRequest.amount < 0)
-      Left(AmountNotValid())
+      storeFailTransaction(depositRequest,AmountNotValid())
     else{
       execDeposit(depositRequest.to, depositRequest.amount) match {
         case Right(account) => {
-          val tx = SuccessTransaction(UUID.randomUUID().toString,depositRequest,account.balance)
-          transactionsDB.putIfAbsent(tx.id,tx)
-          Right(tx)
+          storeSuccessTransaction(depositRequest,account.balance)
         }
-        case Left(err) => Left(err)
+        case Left(err) => storeFailTransaction(depositRequest,err)
       }
 
     }
   }
 
-  def transfer(transferRequest: Transfer) = {
+  def transfer(transferRequest: Transfer): Transaction = {
 
     def doWithdraw(transferRequest: Transfer) = {
       execDeposit(transferRequest.from, -transferRequest.amount)
@@ -87,21 +89,21 @@ trait AccountService {
       execDeposit(transferRequest.from, transferRequest.amount)
     }
 
-    val failOrAccount = for {
+    val transferStatus: Either[TransferStatus, BankAccount] = for {
       updatedSrcAccount <- doWithdraw(transferRequest).left.map(err => FailedWithdraw(err))
       _ <- doDeposit(transferRequest).left.map(err => FailedDeposit(err))
     } yield updatedSrcAccount
 
-    failOrAccount match {
+    transferStatus match {
       case Left(err: FailedDeposit) => {
         doRollback(transferRequest)
-        Left(err.error)
+        storeFailTransaction(transferRequest,err.error)
       }
       case Left(err: FailedWithdraw) =>{
-        Left(err.error)
+        storeFailTransaction(transferRequest,err.error)
       }
       case Right(account) =>{
-        Right(SuccessTransactionResponse(UUID.randomUUID().toString,account.balance))
+        storeSuccessTransaction(transferRequest,account.balance)
       }
     }
 

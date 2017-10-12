@@ -94,14 +94,16 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
     "return 404 if the account does not exist and store the transaction" in {
 
       val withdrawRequest = Withdraw("111", 50)
-      val response = Http("http://localhost:8080/withdraw")
+      val response = Http("http://localhost:8080/transaction/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
 
+      println(response.body)
+
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AccountNotFound().errorMessage
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
         .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
@@ -111,14 +113,14 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       val acc = BankAccount("123", 50)
       server.service.accountsDB.put(acc.id, acc)
 
-      val response = Http("http://localhost:8080/withdraw")
+      val response = Http("http://localhost:8080/transaction/withdraw")
         .header("Content-Type","application/json")
         .postData(Withdraw(acc.id,100).toJson.toString())
         .asString
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe InsufficientFund().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe InsufficientFund().errorMessage
     }
 
     "return 200 if the withdraw is permitted and store the transaction" in {
@@ -127,7 +129,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       server.service.accountsDB.put(acc.id, acc)
 
       val withdrawRequest = Withdraw(acc.id, 50)
-      val response = Http("http://localhost:8080/withdraw")
+      val response = Http("http://localhost:8080/transaction/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
@@ -137,7 +139,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       val body = response.body.parseJson.convertTo[SuccessTransactionResponse]
       body.balance shouldBe 150
       server.service.transactionsDB.values.
-        collect{case x:FailedTransaction => x}
+        collect{case x:SuccessTransaction => x}
         .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
     }
 
@@ -146,7 +148,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       server.service.accountsDB.put(acc.id, acc)
 
       val withdrawRequest = Withdraw(acc.id, 50)
-      val response = Http("http://localhost:8080/withdraw")
+      val response = Http("http://localhost:8080/transaction/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
@@ -156,7 +158,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       response.body.parseJson.convertTo[SuccessTransactionResponse].id.length should be >0
 
       server.service.transactionsDB.values.
-        collect{case x:FailedTransaction => x}
+        collect{case x:SuccessTransaction => x}
         .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
     }
 
@@ -166,14 +168,14 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
 
       val withdrawRequest = Withdraw(acc.id,-100)
 
-      val response = Http("http://localhost:8080/withdraw")
+      val response = Http("http://localhost:8080/transaction/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AmountNotValid().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AmountNotValid().errorMessage
 
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
@@ -184,7 +186,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       val acc = BankAccount("123", 200)
       server.service.accountsDB.put(acc.id, acc)
 
-      val response = Http("http://localhost:8080/withdraw")
+      val response = Http("http://localhost:8080/transaction/withdraw")
         .header("Content-Type","application/json")
         .postData(Withdraw(acc.id,50).toJson.toString())
         .asString
@@ -201,14 +203,14 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
   "Post on /deposit" should {
     "return 404 if account not found and store the transaction" in {
       val depositRequest = Deposit("111", 50)
-      val response = Http("http://localhost:8080/deposit")
+      val response = Http("http://localhost:8080/transaction/deposit")
         .header("Content-Type","application/json")
         .postData(depositRequest.toJson.toString())
         .asString
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AccountNotFound().errorMessage
 
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
@@ -220,14 +222,14 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       server.service.accountsDB.put(acc.id, acc)
 
       val depositRequest = Deposit(acc.id, -50)
-      val response = Http("http://localhost:8080/deposit")
+      val response = Http("http://localhost:8080/transaction/deposit")
         .header("Content-Type","application/json")
         .postData(depositRequest.toJson.toString())
         .asString
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AmountNotValid().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AmountNotValid().errorMessage
 
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
@@ -239,7 +241,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       server.service.accountsDB.put(acc.id, acc)
 
       val depositRequest = Deposit(acc.id, 50)
-      val response = Http("http://localhost:8080/deposit")
+      val response = Http("http://localhost:8080/transaction/deposit")
         .header("Content-Type","application/json")
         .postData(depositRequest.toJson.toString())
         .asString
@@ -250,7 +252,7 @@ class AccountSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSu
       tx.balance shouldBe 250
 
       server.service.transactionsDB.values.
-        collect{case x:FailedTransaction => x}
+        collect{case x:SuccessTransaction => x}
         .find(tx => tx.request == depositRequest).get.request shouldBe depositRequest
 
     }

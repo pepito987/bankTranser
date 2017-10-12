@@ -32,9 +32,9 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
   }
 
   "POST /transfer" should {
-    "return 400 if the body is empty" in {
+    "return 400 if the body is empty and log the transaction" in {
 
-      val response = Http("http://localhost:8080/transfer")
+      val response = Http("http://localhost:8080/transaction/transfer")
         .header("Content-Type", "application/json")
         .postData("").asString
 
@@ -43,7 +43,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe RequestNotValid().errorMessage
     }
 
-    "return 404 if the from account does not exist" in {
+    "return 404 if the from account does not exist and store the transaction" in {
 
       val from = "123"
       val to = "987"
@@ -51,15 +51,20 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       server.service.accountsDB.put(to, BankAccount(to, 200))
 
-      val response = Http("http://localhost:8080/transfer")
+      val transfer = Transfer(from, to, amount)
+      val response = Http("http://localhost:8080/transaction/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          Transfer(from, to, amount).toJson.toString()
+          transfer.toJson.toString()
         ).asString
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AccountNotFound().errorMessage
+
+      server.service.transactionsDB.values
+        .collect{case x:FailedTransaction => x}
+        .find(tx => tx.request == transfer)
     }
 
     "return 404 if the dst account does not exist" in {
@@ -69,15 +74,20 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       server.service.accountsDB.put(from, BankAccount(from, 200))
 
-      val response = Http("http://localhost:8080/transfer")
+      val transfer = Transfer(from, to, amount)
+      val response = Http("http://localhost:8080/transaction/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          Transfer(from, to, amount).toJson.toString()
+          transfer.toJson.toString()
         ).asString
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AccountNotFound().errorMessage
+
+      server.service.transactionsDB.values
+        .collect{case x:FailedTransaction => x}
+        .find(tx => tx.request == transfer)
     }
 
     "rollback if the deposit on a transaction fails" in {
@@ -87,15 +97,19 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       server.service.accountsDB.put(from, BankAccount(from, 200))
 
-      val response = Http("http://localhost:8080/transfer")
+      val transfer = Transfer(from, to, amount)
+      val response = Http("http://localhost:8080/transaction/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          Transfer(from, to, amount).toJson.toString()
+          transfer.toJson.toString()
         ).asString
 
       response.code shouldBe 404
-
       server.service.accountsDB(from).balance shouldBe 200
+
+      server.service.transactionsDB.values
+        .collect{case x:FailedTransaction => x}
+        .find(tx => tx.request == transfer)
 
     }
 
@@ -108,18 +122,23 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       server.service.accountsDB.put(from.id, from)
       server.service.accountsDB.put(to.id, to)
 
-      val response = Http("http://localhost:8080/transfer")
+      val transfer = Transfer(from.id, to.id, amount)
+      val response = Http("http://localhost:8080/transaction/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          Transfer(from.id, to.id, amount).toJson.toString()
+          transfer.toJson.toString()
         ).asString
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe InsufficientFund().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe InsufficientFund().errorMessage
 
       server.service.accountsDB(from.id) shouldBe from
       server.service.accountsDB(to.id) shouldBe to
+
+      server.service.transactionsDB.values
+        .collect{case x:FailedTransaction => x}
+        .find(tx => tx.request == transfer)
     }
 
     "return 200 and the balance reflect the transfer" in {
@@ -131,10 +150,11 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
       server.service.accountsDB.put(from, BankAccount(from, 200))
       server.service.accountsDB.put(to, BankAccount(to, 200))
 
-      val response = Http("http://localhost:8080/transfer")
+      val transfer = Transfer(from, to, amount)
+      val response = Http("http://localhost:8080/transaction/transfer")
         .header("Content-Type", "application/json")
         .postData(
-          Transfer(from, to, amount).toJson.toString()
+          transfer.toJson.toString()
         ).asString
 
       response.code shouldBe 200
@@ -145,6 +165,10 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
 
       fromAcc.balance shouldBe 150
       toAcc.balance shouldBe 250
+
+      server.service.transactionsDB.values
+        .collect{case x:FailedTransaction => x}
+        .find(tx => tx.request == transfer)
     }
 
     "handle concurrency" in {
@@ -159,7 +183,7 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
           Transfer("alice", "john", 50)))
 
         val responses = requests.map(r => Future {
-          Http("http://localhost:8080/transfer")
+          Http("http://localhost:8080/transaction/transfer")
             .header("Content-Type", "application/json")
             .postData(
               r.toJson.toString()

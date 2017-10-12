@@ -17,7 +17,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[ErrorResponse].reason shouldBe AccountNotFound().errorMessage
     }
 
     "return 200 if the account with {id} exist " in {
@@ -39,7 +39,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[ErrorResponse].reason shouldBe AccountNotFound().errorMessage
     }
 
   }

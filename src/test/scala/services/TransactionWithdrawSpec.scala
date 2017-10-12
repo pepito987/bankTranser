@@ -20,7 +20,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AccountNotFound().errorMessage
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
         .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
@@ -37,7 +37,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe InsufficientFund().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe InsufficientFund().errorMessage
     }
 
     "return 200 if the withdraw is permitted and store the transaction" in {
@@ -92,7 +92,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AmountNotValid().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AmountNotValid().errorMessage
 
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}

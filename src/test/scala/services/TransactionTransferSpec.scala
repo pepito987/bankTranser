@@ -23,7 +23,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].error.errorMessage shouldBe RequestNotValid().errorMessage
+      response.body.parseJson.convertTo[ErrorResponse].reason shouldBe RequestNotValid().errorMessage
     }
 
     "return 404 if the from account does not exist and store the transaction" in {
@@ -43,7 +43,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AccountNotFound().errorMessage
 
       server.service.transactionsDB.values
         .collect{case x:FailedTransaction => x}
@@ -66,7 +66,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe AccountNotFound().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AccountNotFound().errorMessage
 
       server.service.transactionsDB.values
         .collect{case x:FailedTransaction => x}
@@ -114,7 +114,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason.errorMessage shouldBe InsufficientFund().errorMessage
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe InsufficientFund().errorMessage
 
       server.service.accountsDB(from.id) shouldBe from
       server.service.accountsDB(to.id) shouldBe to

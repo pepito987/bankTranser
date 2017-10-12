@@ -7,8 +7,6 @@ class JsonSupportSpec extends WordSpec with Matchers with BeforeAndAfter with Js
 
 
   "toJson" should {
-
-
     "convert Error to json " in {
       val x = new Error {
         override def errorMessage: String = "Error message"
@@ -40,7 +38,7 @@ class JsonSupportSpec extends WordSpec with Matchers with BeforeAndAfter with Js
       val response = ErrorResponse(AccountNotFound())
 
       println(str.parseJson.convertTo[ErrorResponse].error.errorMessage)
-//      shouldBe response.error.err_msg
+      //      shouldBe response.error.err_msg
 
     }
 

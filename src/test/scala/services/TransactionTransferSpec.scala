@@ -1,37 +1,18 @@
-package http
+package services
 
 import java.util.UUID
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import common.ServiceAware
+import org.scalatest.Matchers
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Millis, Span}
-import org.scalatest.{BeforeAndAfter, Matchers, WordSpec}
-import services.{AccountNotFound, _}
 import spray.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scalaj.http.Http
 
 
-class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonSupport with ScalaFutures {
-  implicit val system = ActorSystem()
-  implicit val mat = ActorMaterializer()
-  var server: Server = null
-
-  override implicit def patienceConfig: PatienceConfig = PatienceConfig(scaled(Span(1000, Millis)), scaled(Span(15, Millis)))
-
-
-  before {
-    server = new Server
-    Await.ready(server.start, Duration.Inf )
-  }
-
-  after {
-    Await.ready(server.stop, Duration.Inf)
-  }
+class TransactionTransferSpec extends ServiceAware with Matchers with JsonSupport with ScalaFutures {
 
   "POST /transaction/transfer" should {
     "return 400 if the body is empty and log the transaction" in {
@@ -215,8 +196,8 @@ class TransferSpec extends WordSpec with Matchers with BeforeAndAfter with JsonS
         .header("Content-Type", "application/x-www-form-urlencoded").asString
 
       response.code shouldBe 200
-//      response.header("Content-Type").get shouldBe "application/json"
-//      response.body.parseJson.convertTo[SuccessTransactionResponse].balance shouldBe 87
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[SuccessTransactionResponse].balance shouldBe 87
     }
   }
 

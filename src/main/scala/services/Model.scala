@@ -1,6 +1,6 @@
 package services
 
-case class BankAccount(id: String = "", balance: BigDecimal = 0)
+case class BankAccount(id: String = "", balance: BigDecimal = 0, txLock:Option[String]=None)
 
 trait TransactionRequest
 case class Withdraw(from: String, amount: BigDecimal ) extends TransactionRequest
@@ -17,8 +17,8 @@ case class SuccessTransaction(id:String, request: TransactionRequest, balance: B
 case class FailedTransaction(id: String, request: TransactionRequest, error: Error) extends Transaction
 
 trait TransferStatus
-case class FailedWithdraw(error: Error) extends TransferStatus
-case class FailedDeposit(error: Error) extends TransferStatus
+case class FailedWithdraw(error: Error) extends TransferStatus with Error
+case class FailedDeposit(error: Error) extends TransferStatus with Error
 
 trait Error
 case class InsufficientFund(errorMessage: String = "Insufficient Fund") extends Error
@@ -26,3 +26,5 @@ case class AccountNotFound(errorMessage: String = "Account not found") extends E
 case class AmountNotValid(errorMessage: String = "The amount value is not valid") extends Error
 case class RequestNotValid(errorMessage: String = "The request is not valid") extends Error
 case class TransactionNotFound(errorMessage: String = "The the transaction does not exist") extends Error
+case object TransactionNotApplicable extends Error
+case object FatalError extends Error

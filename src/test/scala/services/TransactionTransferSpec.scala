@@ -4,15 +4,23 @@ import java.util.UUID
 
 import common.ServiceAware
 import org.scalatest.Matchers
-import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.{Futures, ScalaFutures, ScaledTimeSpans}
 import spray.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scalaj.http.Http
+import scala.util.{Failure, Success}
+import scalaj.http.{Http, HttpResponse}
+import org.scalatest.time.{Millis, Seconds, Span}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import duration._
 
 
-class TransactionTransferSpec extends ServiceAware with Matchers with JsonSupport with ScalaFutures {
+class TransactionTransferSpec extends ServiceAware with ScaledTimeSpans with Futures with Matchers with JsonSupport with ScalaFutures {
+
+  implicit override val patienceConfig = PatienceConfig(timeout = scaled(Span(5, Seconds)),interval = scaled(Span(500,Millis)))
 
   "POST /transaction/transfer" should {
     "return 400 if the body is empty and log the transaction" in {
@@ -156,34 +164,54 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
     "handle concurrency" in {
 
+      case class MyException(mgs:String) extends Exception
+
+      def sendRequest(transfer: Transfer): Future[HttpResponse[String]] = Future {
+        Http("http://localhost:8080/transaction/transfer")
+          .header("Content-Type", "application/json")
+          .postData(
+            transfer.toJson.toString()
+          ).asString
+      }.transform{
+        case Success(x) if x.code == 503 => Failure(new MyException(""))
+        case Success(y) => Success(y)
+      }
+        .recoverWith{
+          case e:MyException => sendRequest(transfer)
+        }
+
+
+      /*
+          bob   ->30 alice : bob= 170 alice = 230
+          alice ->25 john  : alice= 205 john = 225
+       */
+
+
+
       for( _ <- 1 until 200) {
         server.service.accountsDB.put("bob", BankAccount("bob", 200))
         server.service.accountsDB.put("alice", BankAccount("alice", 200))
         server.service.accountsDB.put("john", BankAccount("john", 200))
 
         val requests = scala.util.Random.shuffle(List(
-          Transfer("bob", "alice", 50),
-          Transfer("alice", "john", 50)))
+          Transfer("bob", "alice", 30),
+          Transfer("alice", "john", 25)))
 
-        val responses = requests.map(r => Future {
-          Http("http://localhost:8080/transaction/transfer")
-            .header("Content-Type", "application/json")
-            .postData(
-              r.toJson.toString()
-            ).asString
-        })
+        val responses: Seq[Future[HttpResponse[String]]] = requests.map(r => sendRequest(r))
 
         Future.sequence(responses).futureValue.foreach(response => {
           response.code shouldBe 200
           response.header("Content-Type").get shouldBe "application/json"
         })
 
-        server.service.accountsDB("alice").balance shouldBe 200
-        server.service.accountsDB("bob").balance shouldBe 150
-        server.service.accountsDB("john").balance shouldBe 250
+        println(server.service.accountsDB)
+        server.service.accountsDB("alice").balance shouldBe 205
+        server.service.accountsDB("bob").balance shouldBe 170
+        server.service.accountsDB("john").balance shouldBe 225
       }
     }
   }
+
   "GET on /transaction/tx/{id} " should {
     "return a transaction " in {
 

@@ -11,6 +11,8 @@ import akka.stream.ActorMaterializer
 import services._
 
 import scala.collection.JavaConverters._
+import scala.collection.concurrent.Map
+import scala.concurrent.Future
 
 class Server extends JsonSupport {
 
@@ -23,6 +25,7 @@ class Server extends JsonSupport {
   val service = new AccountService {
     override val accountsDB = new ConcurrentHashMap[String, BankAccount]().asScala
     override val transactionsDB = new ConcurrentHashMap[String, Transaction]().asScala
+    override val txDB: Map[String, BankAccount] = new ConcurrentHashMap[String, BankAccount]().asScala
   }
 
   val regectionHandler = RejectionHandler.newBuilder()
@@ -48,41 +51,42 @@ class Server extends JsonSupport {
         }
     }~
       pathPrefix("transaction") {
-        path("withdraw") {
-          post {
-            entity(as[Withdraw]) { withdrawRequest =>
-              service.withdraw(withdrawRequest) match {
-                case SuccessTransaction(id, _, balance) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
-                case FailedTransaction(id, _, err: InsufficientFund) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
-                case FailedTransaction(id, _, err: AmountNotValid) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
-                case FailedTransaction(id, _, err: AccountNotFound) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
-                case _ => complete(StatusCodes.InternalServerError)
-              }
-            }
-          }
-        } ~
+//        path("withdraw") {
+//          post {
+//            entity(as[Withdraw]) { withdrawRequest =>
+//              service.withdraw(withdrawRequest) match {
+//                case SuccessTransaction(id, _, balance) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
+//                case FailedTransaction(id, _, err: InsufficientFund) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+//                case FailedTransaction(id, _, err: AmountNotValid) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+//                case FailedTransaction(id, _, err: AccountNotFound) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
+//                case _ => complete(StatusCodes.InternalServerError)
+//              }
+//            }
+//          }
+//        } ~
           path("transfer") {
             post {
               entity(as[Transfer]) { transferRequest =>
-                service.transfer(transferRequest) match {
+                service.concurrentTransfer(transferRequest) match {
                   case SuccessTransaction(id, _, balance) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
                   case FailedTransaction(id, _, err: AccountNotFound) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
                   case FailedTransaction(id, _, err: InsufficientFund) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(id, _, err: TransactionNotApplicable.type ) => complete(StatusCodes.ServiceUnavailable, FailedTransactionResponse(id, ""))
                 }
               }
             }
           } ~
-          path("deposit") {
-            post {
-              entity(as[Deposit]) { depositRequest =>
-                service.deposit(depositRequest) match {
-                  case SuccessTransaction(id, _, balance) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
-                  case FailedTransaction(id, _, error: AccountNotFound) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, error.errorMessage))
-                  case FailedTransaction(id, _, error: AmountNotValid) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, error.errorMessage))
-                }
-              }
-            }
-          } ~
+//          path("deposit") {
+//            post {
+//              entity(as[Deposit]) { depositRequest =>
+//                service.deposit(depositRequest) match {
+//                  case SuccessTransaction(id, _, balance) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
+//                  case FailedTransaction(id, _, error: AccountNotFound) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, error.errorMessage))
+//                  case FailedTransaction(id, _, error: AmountNotValid) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, error.errorMessage))
+//                }
+//              }
+//            }
+//          } ~
           pathPrefix("tx") {
             get {
               parameter('id.as[String]){ id =>

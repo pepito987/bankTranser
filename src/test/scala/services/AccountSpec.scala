@@ -11,8 +11,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
   "GET /account/{id} " should {
     "return 404 if the account with {id} doesn't exist " in {
 
-      val response = Http("http://localhost:8080/account?id=0000")
-        .header("Content-Type","application/x-www-form-urlencoded")
+      val response = Http("http://localhost:8080/account/0000")
         .asString
 
       response.code shouldBe 404
@@ -23,8 +22,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
     "return 200 if the account with {id} exist " in {
       val acc = BankAccount("111", 200)
       server.service.accountsDB.put(acc.id, acc)
-      val response = Http(s"http://localhost:8080/account?id=${acc.id}")
-        .header("Content-Type","application/x-www-form-urlencoded")
+      val response = Http(s"http://localhost:8080/account/${acc.id}")
         .asString
 
       response.code shouldBe 200
@@ -33,7 +31,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
     }
 
     "return error in json" in {
-      val response = Http("http://localhost:8080/account?id=0000")
+      val response = Http("http://localhost:8080/account/0000")
         .header("Content-Type","application/x-www-form-urlencoded")
         .asString
 

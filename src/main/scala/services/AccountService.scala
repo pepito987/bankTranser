@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 trait AccountService {
   val logger = LoggerFactory.getLogger(classOf[AccountService])
   val accountsDB: scala.collection.concurrent.Map[String, BankAccount]
-  val transactionsDB: scala.collection.concurrent.Map[String, Transaction]
+  val transactionsDB: scala.collection.concurrent.Map[String, TransactionStatus]
 
   def create(): BankAccount = accountsDB.synchronized {
     val id = UUID.randomUUID().toString
@@ -19,21 +19,24 @@ trait AccountService {
       .getOrElse(account)
   }
 
-  def getAccount(id: String): Either[AccountNotFound, BankAccount] = {
-    accountsDB.get(id).toRight(AccountNotFound())
+  def getAccount(id: String): Option[BankAccount] = {
+    accountsDB.get(id)
   }
 
-  def getTransaction(id:String): Either[TransactionNotFound, Transaction] = {
-    transactionsDB.get(id).toRight(TransactionNotFound())
+  def getTransaction(transactionId:String, accountId:String): Either[Error, TransactionStatus] = {
+    for {
+      _ <- getAccount(accountId).toRight(AccountNotFound())
+      tx <- transactionsDB.get(transactionId).toRight(TransactionNotFound())
+    } yield tx
   }
 
   private def execDeposit(accountId: String, amount: BigDecimal): Either[Error, BankAccount] = {
-    logger.debug(s"Executing deposit on account [$accountId] of amount [$amount]")
     this.synchronized{
       accountsDB.get(accountId).map { account =>
         if (account.balance + amount < 0)
           Left(InsufficientFund())
         else {
+          logger.debug(s"Executing deposit on account [$accountId] of amount [$amount]")
           val copy = account.copy(balance = account.balance + amount)
           accountsDB.put(accountId, copy)
           Right(copy)
@@ -42,21 +45,21 @@ trait AccountService {
     }
   }
 
-  private def storeFailTransaction(request: TransactionRequest, error: Error) = {
+  private def storeFailTransaction(request: TransactionType, error: Error) = {
     logger.debug(s"Storing failed Transaction: [$request] with error: [$error]")
     val transaction = FailedTransaction(UUID.randomUUID().toString,request,error, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
-  private def storeSuccessTransaction(request: TransactionRequest, balance: BigDecimal) = {
+  private def storeSuccessTransaction(request: TransactionType, balance: BigDecimal) = {
     logger.debug(s"Storing successful transaction: [$request] with balance: [$balance]")
     val transaction = SuccessTransaction(UUID.randomUUID().toString,request,balance, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
-  def withdraw(withdrawRequest: Withdraw): Transaction = {
+  def withdraw(withdrawRequest: Withdraw): TransactionStatus = {
     if (withdrawRequest.amount < 0){
       storeFailTransaction(withdrawRequest,AmountNotValid())
     }
@@ -72,7 +75,7 @@ trait AccountService {
     }
   }
 
-  def deposit(depositRequest: Deposit): Transaction = {
+  def deposit(depositRequest: Deposit): TransactionStatus = {
     if (depositRequest.amount < 0)
       storeFailTransaction(depositRequest,AmountNotValid())
     else{
@@ -86,7 +89,7 @@ trait AccountService {
     }
   }
 
-  def transfer(transferRequest: Transfer): Transaction = {
+  def transfer(transferRequest: Transfer): TransactionStatus = {
 
     def doWithdraw(transferRequest: Transfer) = {
       if(transferRequest.amount <0)

@@ -10,8 +10,8 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
 
   "Post on /deposit" should {
     "return 404 if account not found and store the transaction" in {
-      val depositRequest = Deposit("111", 50)
-      val response = Http("http://localhost:8080/transaction/deposit")
+      val depositRequest = SingleTransaction(50)
+      val response = Http("http://localhost:8080/account/111/deposit")
         .header("Content-Type","application/json")
         .postData(depositRequest.toJson.toString())
         .asString
@@ -22,15 +22,16 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
 
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
-        .find(tx => tx.request == depositRequest).get.request shouldBe depositRequest
+        .find(tx => tx.request.isInstanceOf[Deposit])
+        .get.request.asInstanceOf[Deposit].amount shouldBe depositRequest.amount
     }
 
     "return 400 if the amount is negative and store the transaction" in {
       val acc = BankAccount("123", 200)
       server.service.accountsDB.put(acc.id, acc)
 
-      val depositRequest = Deposit(acc.id, -50)
-      val response = Http("http://localhost:8080/transaction/deposit")
+      val depositRequest = SingleTransaction(-50)
+      val response = Http("http://localhost:8080/account/123/deposit")
         .header("Content-Type","application/json")
         .postData(depositRequest.toJson.toString())
         .asString
@@ -41,15 +42,16 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
 
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
-        .find(tx => tx.request == depositRequest).get.request shouldBe depositRequest
+        .find(tx => tx.request.isInstanceOf[Deposit])
+        .get.request.asInstanceOf[Deposit].amount shouldBe depositRequest.amount
     }
 
     "return 200 if the deposit is possible and store the transaction" in {
       val acc = BankAccount("123", 200)
       server.service.accountsDB.put(acc.id, acc)
 
-      val depositRequest = Deposit(acc.id, 50)
-      val response = Http("http://localhost:8080/transaction/deposit")
+      val depositRequest = SingleTransaction(50)
+      val response = Http("http://localhost:8080/account/123/deposit")
         .header("Content-Type","application/json")
         .postData(depositRequest.toJson.toString())
         .asString
@@ -59,9 +61,7 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
       val tx = response.body.parseJson.convertTo[SuccessTransactionResponse]
       tx.balance shouldBe 250
 
-      server.service.transactionsDB.values.
-        collect{case x:SuccessTransaction => x}
-        .find(tx => tx.request == depositRequest).get.request shouldBe depositRequest
+      server.service.transactionsDB.contains(tx.id) shouldBe true
     }
   }
 }

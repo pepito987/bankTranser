@@ -10,8 +10,9 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
   "POST /withdraw" should {
     "return 404 if the account does not exist and store the transaction" in {
 
-      val withdrawRequest = Withdraw("111", 50)
-      val response = Http("http://localhost:8080/transaction/withdraw")
+      val withdrawRequest = SingleTransaction(50)
+
+      val response = Http("http://localhost:8080/account/123/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
@@ -21,16 +22,17 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
       response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AccountNotFound().errorMessage
       server.service.transactionsDB.values.
         collect{case x:FailedTransaction => x}
-        .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
+        .find(tx => tx.request.isInstanceOf[Withdraw])
+        .get.request.asInstanceOf[Withdraw].amount shouldBe withdrawRequest.amount
     }
 
     "return 400 if the amount is bigger then the balance" in {
       val acc = BankAccount("123", 50)
       server.service.accountsDB.put(acc.id, acc)
 
-      val response = Http("http://localhost:8080/transaction/withdraw")
+      val response = Http("http://localhost:8080/account/123/withdraw")
         .header("Content-Type","application/json")
-        .postData(Withdraw(acc.id,100).toJson.toString())
+        .postData(SingleTransaction(100).toJson.toString())
         .asString
 
       response.code shouldBe 400
@@ -43,8 +45,8 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
       val acc = BankAccount("123", 200)
       server.service.accountsDB.put(acc.id, acc)
 
-      val withdrawRequest = Withdraw(acc.id, 50)
-      val response = Http("http://localhost:8080/transaction/withdraw")
+      val withdrawRequest = SingleTransaction(50)
+      val response = Http("http://localhost:8080/account/123/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
@@ -53,57 +55,53 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
       response.header("Content-Type").get shouldBe "application/json"
       val body = response.body.parseJson.convertTo[SuccessTransactionResponse]
       body.balance shouldBe 150
-      server.service.transactionsDB.values.
-        collect{case x:SuccessTransaction => x}
-        .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
+      server.service.transactionsDB.contains(body.id) shouldBe true
     }
 
     "return a transaction id if valid withdraw and store the transaction" in {
       val acc = BankAccount("123", 200)
       server.service.accountsDB.put(acc.id, acc)
 
-      val withdrawRequest = Withdraw(acc.id, 50)
-      val response = Http("http://localhost:8080/transaction/withdraw")
+      val withdrawRequest = SingleTransaction(50)
+      val response = Http("http://localhost:8080/account/123/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[SuccessTransactionResponse].id.length should be >0
+      val body = response.body.parseJson.convertTo[SuccessTransactionResponse]
+      body.id.length should be >0
 
-      server.service.transactionsDB.values.
-        collect{case x:SuccessTransaction => x}
-        .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
+      server.service.transactionsDB.contains(body.id) shouldBe true
     }
 
     "return 400 if the amount is negative and store the transaction and store the transaction" in {
       val acc = BankAccount("123", 50)
       server.service.accountsDB.put(acc.id, acc)
 
-      val withdrawRequest = Withdraw(acc.id,-100)
+      val withdrawRequest = SingleTransaction(-100)
 
-      val response = Http("http://localhost:8080/transaction/withdraw")
+      val response = Http("http://localhost:8080/account/123/withdraw")
         .header("Content-Type","application/json")
         .postData(withdrawRequest.toJson.toString())
         .asString
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AmountNotValid().errorMessage
+      val body = response.body.parseJson.convertTo[FailedTransactionResponse]
+      body.reason shouldBe AmountNotValid().errorMessage
 
-      server.service.transactionsDB.values.
-        collect{case x:FailedTransaction => x}
-        .find(tx => tx.request == withdrawRequest).get.request shouldBe withdrawRequest
+      server.service.transactionsDB.contains(body.id) shouldBe true
     }
 
     "store the successful withdraw transaction" in {
       val acc = BankAccount("123", 200)
       server.service.accountsDB.put(acc.id, acc)
 
-      val response = Http("http://localhost:8080/transaction/withdraw")
+      val response = Http("http://localhost:8080/account/123/withdraw")
         .header("Content-Type","application/json")
-        .postData(Withdraw(acc.id,50).toJson.toString())
+        .postData(SingleTransaction(50).toJson.toString())
         .asString
 
       response.code shouldBe 200

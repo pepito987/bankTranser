@@ -1,6 +1,7 @@
 package services
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import org.joda.time.DateTime
 import spray.json._
 
 trait JsonSupport extends SprayJsonSupport {
@@ -18,5 +19,22 @@ trait JsonSupport extends SprayJsonSupport {
   implicit val successTransactionResponseFormat = jsonFormat2(SuccessTransactionResponse)
   implicit val FailedTransactionResponseFormat = jsonFormat2(FailedTransactionResponse)
   implicit val ErrorResponseFormat = jsonFormat1(ErrorResponse)
-  implicit val FetchTransactionResponseFormat = jsonFormat2(FetchTransactionResponse)
+
+  implicit object FetchTransactionResponseFormat extends RootJsonFormat[FetchTransactionResponse] {
+    def write(response: FetchTransactionResponse) = {
+      JsObject(
+        "id" -> JsString(response.id),
+        "balance" -> response.balance.toJson,
+        "time" -> JsString(response.toString)
+      )
+    }
+
+    def read(value: JsValue) = {
+      value.asJsObject.getFields("id","balance","time") match {
+        case Seq(JsString(id),JsObject(balance),JsString(time)) =>
+          FetchTransactionResponse(id,Some(JsObject(balance).convertTo[BigDecimal]),DateTime.parse(time))
+      }
+    }
+  }
+
 }

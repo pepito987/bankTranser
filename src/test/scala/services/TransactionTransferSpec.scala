@@ -3,6 +3,7 @@ package services
 import java.util.UUID
 
 import common.ServiceAware
+import org.joda.time.DateTime
 import org.scalatest.Matchers
 import org.scalatest.concurrent.ScalaFutures
 import spray.json._
@@ -143,6 +144,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[SuccessTransactionResponse].balance shouldBe 150
+      println(response.body.parseJson.prettyPrint)
       val fromAcc = server.service.accountsDB(from)
       val toAcc = server.service.accountsDB(to)
 
@@ -179,7 +181,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
     }
     "handle concurrency" in {
 
-      for( _ <- 1 until 2000) {
+      for( _ <- 1 until 200) {
         server.service.accountsDB.put("bob", BankAccount("bob", 200))
         server.service.accountsDB.put("alice", BankAccount("alice", 200))
         server.service.accountsDB.put("john", BankAccount("john", 200))
@@ -211,7 +213,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
     "return a transaction " in {
 
       val uuid = UUID.randomUUID().toString
-      val tx = SuccessTransaction(uuid,Transfer("111", "222", 90),87)
+      val tx = SuccessTransaction(uuid,Transfer("111", "222", 90),87, DateTime.now())
 
       server.service.transactionsDB.put(tx.id,tx)
 

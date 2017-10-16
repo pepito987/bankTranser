@@ -2,6 +2,7 @@ package services
 
 import java.util.UUID
 
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 
 
@@ -43,14 +44,14 @@ trait AccountService {
 
   private def storeFailTransaction(request: TransactionRequest, error: Error) = {
     logger.debug(s"Storing failed Transaction: [$request] with error: [$error]")
-    val transaction = FailedTransaction(UUID.randomUUID().toString,request,error)
+    val transaction = FailedTransaction(UUID.randomUUID().toString,request,error, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
   private def storeSuccessTransaction(request: TransactionRequest, balance: BigDecimal) = {
     logger.debug(s"Storing successful transaction: [$request] with balance: [$balance]")
-    val transaction = SuccessTransaction(UUID.randomUUID().toString,request,balance)
+    val transaction = SuccessTransaction(UUID.randomUUID().toString,request,balance, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }

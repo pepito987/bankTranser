@@ -16,8 +16,6 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
         .postData(withdrawRequest.toJson.toString())
         .asString
 
-      println(response.body)
-
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AccountNotFound().errorMessage

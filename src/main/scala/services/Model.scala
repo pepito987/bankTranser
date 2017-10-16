@@ -1,5 +1,7 @@
 package services
 
+import org.joda.time.DateTime
+
 case class BankAccount(id: String = "", balance: BigDecimal = 0)
 
 sealed trait TransactionRequest
@@ -9,12 +11,12 @@ case class Transfer(from: String, to: String, amount: BigDecimal) extends Transa
 
 case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class FailedTransactionResponse(id:String, reason: String)
-case class FetchTransactionResponse(id:String, balance: Option[BigDecimal] = None)
+case class FetchTransactionResponse(id:String, balance: Option[BigDecimal] = None, time: DateTime)
 case class ErrorResponse(reason: String)
 
 sealed trait Transaction
-case class SuccessTransaction(id:String, request: TransactionRequest, balance: BigDecimal)extends Transaction
-case class FailedTransaction(id: String, request: TransactionRequest, error: Error) extends Transaction
+case class SuccessTransaction(id:String, request: TransactionRequest, balance: BigDecimal, time: DateTime)extends Transaction
+case class FailedTransaction(id: String, request: TransactionRequest, error: Error, time: DateTime) extends Transaction
 
 sealed trait TransferStatus
 case class FailedWithdraw(error: Error) extends TransferStatus

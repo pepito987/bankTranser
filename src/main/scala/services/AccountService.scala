@@ -2,14 +2,18 @@ package services
 
 import java.util.UUID
 
+import org.slf4j.LoggerFactory
+
 
 trait AccountService {
+  val logger = LoggerFactory.getLogger(classOf[AccountService])
   val accountsDB: scala.collection.concurrent.Map[String, BankAccount]
   val transactionsDB: scala.collection.concurrent.Map[String, Transaction]
 
   def create(): BankAccount = accountsDB.synchronized {
     val id = UUID.randomUUID().toString
     val account = BankAccount(id = id)
+    logger.debug(s"Creating account [$id]")
     accountsDB.putIfAbsent(id, account)
       .getOrElse(account)
   }
@@ -23,6 +27,7 @@ trait AccountService {
   }
 
   private def execDeposit(accountId: String, amount: BigDecimal): Either[Error, BankAccount] = {
+    logger.debug(s"Executing deposit on account [$accountId] of amount [$amount]")
     this.synchronized{
       accountsDB.get(accountId).map { account =>
         if (account.balance + amount < 0)
@@ -37,12 +42,14 @@ trait AccountService {
   }
 
   private def storeFailTransaction(request: TransactionRequest, error: Error) = {
+    logger.debug(s"Storing failed Transaction: [$request] with error: [$error]")
     val transaction = FailedTransaction(UUID.randomUUID().toString,request,error)
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
   private def storeSuccessTransaction(request: TransactionRequest, balance: BigDecimal) = {
+    logger.debug(s"Storing successful transaction: [$request] with balance: [$balance]")
     val transaction = SuccessTransaction(UUID.randomUUID().toString,request,balance)
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
@@ -102,6 +109,7 @@ trait AccountService {
 
     transferStatus match {
       case Left(err: FailedDeposit) => {
+        logger.info(s"Failed transaction with Rollback on request: [$transferRequest]")
         doRollback(transferRequest)
         storeFailTransaction(transferRequest,err.error)
       }

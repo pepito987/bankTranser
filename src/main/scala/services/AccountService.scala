@@ -1,7 +1,6 @@
 package services
 
 import java.util.UUID
-import services.TransferStatus
 
 
 trait AccountService {
@@ -19,22 +18,22 @@ trait AccountService {
     accountsDB.get(id).toRight(AccountNotFound())
   }
 
-  def getTransaction(id:String) = {
+  def getTransaction(id:String): Either[TransactionNotFound, Transaction] = {
     transactionsDB.get(id).toRight(TransactionNotFound())
   }
 
-  private def execDeposit(to: String, amount: BigDecimal): Either[Error, BankAccount] = {
-    //    this.synchronized{
-    accountsDB.get(to).map { account =>
-      if (account.balance + amount < 0)
-        Left(InsufficientFund())
-      else {
-        val copy = account.copy(balance = account.balance + amount)
-        accountsDB.put(to, copy)
-        Right(copy)
-      }
-    }.getOrElse(Left(AccountNotFound()))
-    //    }
+  private def execDeposit(accountId: String, amount: BigDecimal): Either[Error, BankAccount] = {
+    this.synchronized{
+      accountsDB.get(accountId).map { account =>
+        if (account.balance + amount < 0)
+          Left(InsufficientFund())
+        else {
+          val copy = account.copy(balance = account.balance + amount)
+          accountsDB.put(accountId, copy)
+          Right(copy)
+        }
+      }.getOrElse(Left(AccountNotFound()))
+    }
   }
 
   private def storeFailTransaction(request: TransactionRequest, error: Error) = {
@@ -49,7 +48,7 @@ trait AccountService {
     transaction
   }
 
-  def withdraw(withdrawRequest: Withdraw) = {
+  def withdraw(withdrawRequest: Withdraw): Transaction = {
     if (withdrawRequest.amount < 0){
       storeFailTransaction(withdrawRequest,AmountNotValid())
     }
@@ -59,13 +58,13 @@ trait AccountService {
           storeSuccessTransaction(withdrawRequest,account.balance)
         }
         case Left(error) => {
-         storeFailTransaction(withdrawRequest,error)
+          storeFailTransaction(withdrawRequest,error)
         }
       }
     }
   }
 
-  def deposit(depositRequest: Deposit)= {
+  def deposit(depositRequest: Deposit): Transaction = {
     if (depositRequest.amount < 0)
       storeFailTransaction(depositRequest,AmountNotValid())
     else{
@@ -82,7 +81,10 @@ trait AccountService {
   def transfer(transferRequest: Transfer): Transaction = {
 
     def doWithdraw(transferRequest: Transfer) = {
-      execDeposit(transferRequest.from, -transferRequest.amount)
+      if(transferRequest.amount <0)
+        Left(AmountNotValid())
+      else
+        execDeposit(transferRequest.from, -transferRequest.amount)
     }
 
     def doDeposit(transferRequest: Transfer) = {

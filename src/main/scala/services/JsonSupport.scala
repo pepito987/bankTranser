@@ -18,4 +18,5 @@ trait JsonSupport extends SprayJsonSupport {
   implicit val successTransactionResponseFormat = jsonFormat2(SuccessTransactionResponse)
   implicit val FailedTransactionResponseFormat = jsonFormat2(FailedTransactionResponse)
   implicit val ErrorResponseFormat = jsonFormat1(ErrorResponse)
+  implicit val FetchTransactionResponseFormat = jsonFormat2(FetchTransactionResponse)
 }

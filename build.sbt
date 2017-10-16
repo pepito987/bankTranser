@@ -12,6 +12,8 @@ lazy val root = (project in file(".")).
       scalaTest % Test,
       akkaHttp,
       jsonSupport,
+      "log4j" % "log4j" % "1.2.14",
+      "org.slf4j" % "slf4j-log4j12" % "1.7.21",
       "org.scalaj" %% "scalaj-http" % "2.3.0" % Test
     )
   )

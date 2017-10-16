@@ -96,7 +96,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
     }
 
-    "return 400 if the amount is bigger than the balance and will not update the accounts" in {
+    "return 400 if insufficient found and will not update the accounts" in {
 
       val amount = 500
       val from = BankAccount("123", 200)
@@ -154,9 +154,32 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
         .find(tx => tx.request == transfer)
     }
 
+    "return 400 if the amount is not valid" in {
+      val from = "123"
+      val to = "987"
+      val amount = -50
+
+      server.service.accountsDB.put(from, BankAccount(from, 200))
+      server.service.accountsDB.put(to, BankAccount(to, 200))
+
+      val transfer = Transfer(from, to, amount)
+      val response = Http("http://localhost:8080/transaction/transfer")
+        .header("Content-Type", "application/json")
+        .postData(
+          transfer.toJson.toString()
+        ).asString
+
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AmountNotValid().errorMessage
+
+      server.service.transactionsDB.values
+        .collect{case x:FailedTransaction => x}
+        .find(tx => tx.request == transfer)
+    }
     "handle concurrency" in {
 
-      for( _ <- 1 until 200) {
+      for( _ <- 1 until 2000) {
         server.service.accountsDB.put("bob", BankAccount("bob", 200))
         server.service.accountsDB.put("alice", BankAccount("alice", 200))
         server.service.accountsDB.put("john", BankAccount("john", 200))

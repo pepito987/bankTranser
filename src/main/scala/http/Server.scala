@@ -26,10 +26,9 @@ class Server extends JsonSupport {
   }
 
   val regectionHandler = RejectionHandler.newBuilder()
-    //    .handleNotFound { complete((StatusCodes.NotFound, "Oh man, what you are looking for is long gone.")) }
     .handle {
     case MalformedRequestContentRejection(msg, _) => complete((StatusCodes.BadRequest, ErrorResponse(RequestNotValid().errorMessage)))
-    case x => x; complete(StatusCodes.BadRequest)
+    case x => complete(StatusCodes.BadRequest)
   }
     .result()
 
@@ -68,6 +67,7 @@ class Server extends JsonSupport {
                   case SuccessTransaction(id, _, balance) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
                   case FailedTransaction(id, _, err: AccountNotFound) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
                   case FailedTransaction(id, _, err: InsufficientFund) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(id, _, err: AmountNotValid) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
                 }
               }
             }
@@ -87,8 +87,8 @@ class Server extends JsonSupport {
             get {
               parameter('id.as[String]){ id =>
                 service.getTransaction(id) match {
-                  case Right(tx: SuccessTransaction) => complete(StatusCodes.OK, s"${tx.id}, ${tx.balance}")
-                  case Right(tx: FailedTransaction) => complete(StatusCodes.OK, s"${tx.id}")
+                  case Right(tx: SuccessTransaction) => complete(StatusCodes.OK, FetchTransactionResponse(tx.id, Some(tx.balance)))
+                  case Right(tx: FailedTransaction) => complete(StatusCodes.OK, FetchTransactionResponse(tx.id))
                   case Left(x) => complete(StatusCodes.NotFound, ErrorResponse(x.errorMessage))
                 }
               }

@@ -33,7 +33,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       val to = "987"
       val amount = 50
 
-      server.service.accountsDB.put(to, BankAccount(to, 200))
+      server.service.accountsDB.put(to, BankAccount(to, "bob", 200))
 
       val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/000/transfer")
@@ -55,7 +55,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       val to = "987"
       val amount = 50
 
-      server.service.accountsDB.put(from, BankAccount(from, 200))
+      server.service.accountsDB.put(from, BankAccount(from, "bob", 200))
 
       val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
@@ -77,7 +77,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       val to = "987"
       val amount = 50
 
-      server.service.accountsDB.put(from, BankAccount(from, 200))
+      server.service.accountsDB.put(from, BankAccount(from, "bob", 200))
 
       val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
@@ -99,8 +99,8 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
     "return 400 if insufficient found and will not update the accounts" in {
 
       val amount = 500
-      val from = BankAccount("123", 200)
-      val to = BankAccount("987", 200)
+      val from = BankAccount("123", "bob", 200)
+      val to = BankAccount("987", "bob", 200)
 
       server.service.accountsDB.put(from.id, from)
       server.service.accountsDB.put(to.id, to)
@@ -129,8 +129,8 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       val to = "987"
       val amount = 50
 
-      server.service.accountsDB.put(from, BankAccount(from, 200))
-      server.service.accountsDB.put(to, BankAccount(to, 200))
+      server.service.accountsDB.put(from, BankAccount(from, "bob", 200))
+      server.service.accountsDB.put(to, BankAccount(to, "bob", 200))
 
       val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
@@ -158,8 +158,8 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       val to = "987"
       val amount = -50
 
-      server.service.accountsDB.put(from, BankAccount(from, 200))
-      server.service.accountsDB.put(to, BankAccount(to, 200))
+      server.service.accountsDB.put(from, BankAccount(from, "bob", 200))
+      server.service.accountsDB.put(to, BankAccount(to, "bob", 200))
 
       val transfer = Transfer(from, to, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
@@ -178,13 +178,16 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
     "handle concurrency" in {
 
       for( _ <- 1 until 200) {
-        server.service.accountsDB.put("bob", BankAccount("bob", 200))
-        server.service.accountsDB.put("alice", BankAccount("alice", 200))
-        server.service.accountsDB.put("john", BankAccount("john", 200))
+        val bob = BankAccount("123", "bob", 200)
+        val alice = BankAccount("345", "alice", 200)
+        val john = BankAccount("678", "john", 200)
+        server.service.accountsDB.put(bob.id, bob )
+        server.service.accountsDB.put(alice.id, alice )
+        server.service.accountsDB.put(john.id, john )
 
         val requests = scala.util.Random.shuffle(List(
-          Transfer("bob", "alice", 50),
-          Transfer("alice", "john", 50)))
+          Transfer(bob.id, alice.id, 50),
+          Transfer(alice.id, john.id, 50)))
 
         val responses = requests.map(r => Future {
           Http(s"http://localhost:8080/account/${r.from}/transfer")
@@ -199,9 +202,9 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
           response.header("Content-Type").get shouldBe "application/json"
         })
 
-        server.service.accountsDB("alice").balance shouldBe 200
-        server.service.accountsDB("bob").balance shouldBe 150
-        server.service.accountsDB("john").balance shouldBe 250
+        server.service.accountsDB("123").balance shouldBe 150
+        server.service.accountsDB("345").balance shouldBe 200
+        server.service.accountsDB("678").balance shouldBe 250
       }
     }
   }
@@ -216,9 +219,9 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
     }
 
     "return 404 fi the transaction does not exist" in {
-      server.service.accountsDB.put("bob", BankAccount("bob", 200))
+      server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
 
-      val response = Http(s"http://localhost:8080/account/bob/tx/555")
+      val response = Http(s"http://localhost:8080/account/123/tx/555")
         .header("Content-Type", "application/x-www-form-urlencoded").asString
 
       response.code shouldBe 404
@@ -228,7 +231,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
     "return a transaction " in {
 
-      server.service.accountsDB.put("123", BankAccount("123", 200))
+      server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
       val uuid = UUID.randomUUID().toString
       val tx = SuccessTransaction(uuid,Transfer("111", "222", 90),87, DateTime.now())
 

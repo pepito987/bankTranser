@@ -27,7 +27,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
     }
 
     "return 400 if the amount is bigger then the balance" in {
-      val acc = BankAccount("123", 50)
+      val acc = BankAccount("123", "bob", 50)
       server.service.accountsDB.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/account/123/withdraw")
@@ -42,7 +42,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
 
     "return 200 if the withdraw is permitted and store the transaction" in {
 
-      val acc = BankAccount("123", 200)
+      val acc = BankAccount("123", "bob", 200)
       server.service.accountsDB.put(acc.id, acc)
 
       val withdrawRequest = SingleTransaction(50)
@@ -59,7 +59,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
     }
 
     "return a transaction id if valid withdraw and store the transaction" in {
-      val acc = BankAccount("123", 200)
+      val acc = BankAccount("123", "bob", 200)
       server.service.accountsDB.put(acc.id, acc)
 
       val withdrawRequest = SingleTransaction(50)
@@ -77,7 +77,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
     }
 
     "return 400 if the amount is negative and store the transaction and store the transaction" in {
-      val acc = BankAccount("123", 50)
+      val acc = BankAccount("123", "bob", 50)
       server.service.accountsDB.put(acc.id, acc)
 
       val withdrawRequest = SingleTransaction(-100)
@@ -96,7 +96,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
     }
 
     "store the successful withdraw transaction" in {
-      val acc = BankAccount("123", 200)
+      val acc = BankAccount("123", "bob", 200)
       server.service.accountsDB.put(acc.id, acc)
 
       val response = Http("http://localhost:8080/account/123/withdraw")

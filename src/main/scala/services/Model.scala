@@ -2,7 +2,7 @@ package services
 
 import org.joda.time.DateTime
 
-case class BankAccount(id: String = "", balance: BigDecimal = 0)
+case class BankAccount(id: String, userName:String, balance: BigDecimal = 0)
 
 sealed trait TransactionType
 case class Withdraw(from: String, amount: BigDecimal ) extends TransactionType
@@ -12,6 +12,8 @@ case class Transfer(from: String, to: String, amount: BigDecimal) extends Transa
 sealed trait TransactionRequest
 case class SingleTransaction(amount: BigDecimal) extends TransactionRequest
 case class BiTransaction(to: String, amount: BigDecimal) extends TransactionRequest
+
+case class CreateAccountRequest(userName:String, initialBalance:Option[BigDecimal])
 
 case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class FailedTransactionResponse(id:String, reason: String)
@@ -35,4 +37,5 @@ case class AccountNotFound(override val errorMessage: String = "Account not foun
 case class AmountNotValid(override val errorMessage: String = "The amount value is not valid") extends Error
 case class RequestNotValid(override val errorMessage: String = "The request is not valid") extends Error
 case class TransactionNotFound(override val errorMessage: String = "The the transaction does not exist") extends Error
+case class InvalidName(override val errorMessage: String = "Invalid name for the account") extends Error
 

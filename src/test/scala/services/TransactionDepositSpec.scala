@@ -27,7 +27,7 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
     }
 
     "return 400 if the amount is negative and store the transaction" in {
-      val acc = BankAccount("123", 200)
+      val acc = BankAccount("123", "bob", 200)
       server.service.accountsDB.put(acc.id, acc)
 
       val depositRequest = SingleTransaction(-50)
@@ -47,7 +47,7 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
     }
 
     "return 200 if the deposit is possible and store the transaction" in {
-      val acc = BankAccount("123", 200)
+      val acc = BankAccount("123", "bob", 200)
       server.service.accountsDB.put(acc.id, acc)
 
       val depositRequest = SingleTransaction(50)

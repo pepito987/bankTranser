@@ -11,12 +11,20 @@ trait AccountService {
   val accountsDB: scala.collection.concurrent.Map[String, BankAccount]
   val transactionsDB: scala.collection.concurrent.Map[String, TransactionRecord]
 
-  def create(): BankAccount = accountsDB.synchronized {
-    val id = UUID.randomUUID().toString
-    val account = BankAccount(id = id)
-    logger.debug(s"Creating account [$id]")
-    accountsDB.putIfAbsent(id, account)
-      .getOrElse(account)
+  def create(userName:String, balance:Option[BigDecimal]): Either[Error, BankAccount] = accountsDB.synchronized {
+    val isEmptyName = userName.isEmpty
+    val isNegative: Option[Boolean] = balance.map{ _ <= 0}
+
+    (isEmptyName, isNegative) match {
+      case (true, _ ) => Left(InvalidName())
+      case (_, Some(true)) => Left(AmountNotValid())
+      case (_,_) => {
+        val id = UUID.randomUUID().toString
+        val account = BankAccount(id = id, userName=userName, balance=balance.getOrElse(0))
+        logger.debug(s"Creating account [$id]")
+        Right(accountsDB.putIfAbsent(id, account).getOrElse(account))
+      }
+    }
   }
 
   def getAccount(id: String): Option[BankAccount] = {

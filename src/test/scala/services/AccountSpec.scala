@@ -20,7 +20,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
     }
 
     "return 200 if the account with {id} exist " in {
-      val acc = BankAccount("111", 200)
+      val acc = BankAccount("111", "bob", 200)
       server.service.accountsDB.put(acc.id, acc)
       val response = Http(s"http://localhost:8080/account/${acc.id}")
         .asString
@@ -46,7 +46,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
     "Create a new account" in {
       val response = Http("http://localhost:8080/account")
         .header("Content-Type","application/json")
-        .postData("")
+        .postData(CreateAccountRequest("Alice",Some(345)).toJson.toString())
         .asString
 
       response.code shouldBe 201
@@ -54,7 +54,29 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
       val account = response.body.parseJson.convertTo[BankAccount]
       server.service.accountsDB.contains(account.id) shouldBe true
     }
+    "Return 400 if the initial balance is negative" in {
+      val response = Http("http://localhost:8080/account")
+        .header("Content-Type","application/json")
+        .postData(CreateAccountRequest("Alice",Some(-90)).toJson.toString())
+        .asString
 
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      val error = response.body.parseJson.convertTo[ErrorResponse]
+      error.reason shouldBe AmountNotValid().errorMessage
+    }
+
+    "Return 400 if the name is empty" in {
+      val response = Http("http://localhost:8080/account")
+        .header("Content-Type","application/json")
+        .postData(CreateAccountRequest("",Some(8)).toJson.toString())
+        .asString
+
+      response.code shouldBe 400
+      response.header("Content-Type").get shouldBe "application/json"
+      val error = response.body.parseJson.convertTo[ErrorResponse]
+      error.reason shouldBe InvalidName().errorMessage
+    }
   }
 
 }

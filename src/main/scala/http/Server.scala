@@ -28,7 +28,7 @@ class Server extends JsonSupport {
   val regectionHandler = RejectionHandler.newBuilder()
     .handle {
       case MalformedRequestContentRejection(msg, _) => complete((StatusCodes.BadRequest, ErrorResponse(RequestNotValid().errorMessage)))
-      case x => complete(StatusCodes.BadRequest)
+      case _ => complete(StatusCodes.InternalServerError)
     }
     .result()
 
@@ -36,7 +36,13 @@ class Server extends JsonSupport {
     pathPrefix("account") {
       pathEndOrSingleSlash {
         post {
-          complete(StatusCodes.Created, service.create())
+          entity(as[CreateAccountRequest]) { request =>
+            service.create(request.userName, request.initialBalance) match {
+              case Right(account) => complete(StatusCodes.Created, account)
+              case Left(e:InvalidName) => complete(StatusCodes.BadRequest, ErrorResponse(e.errorMessage) )
+              case Left(e:AmountNotValid) => complete(StatusCodes.BadRequest, ErrorResponse(e.errorMessage) )
+            }
+          }
         }
       } ~
         pathPrefix(".*".r) { accId =>

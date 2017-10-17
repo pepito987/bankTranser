@@ -21,7 +21,7 @@ trait JsonSupport extends SprayJsonSupport {
   implicit val ErrorResponseFormat = jsonFormat1(ErrorResponse)
 
   implicit val singleTransactionFormat = jsonFormat1(SingleTransaction)
-  implicit val transactionFormat = jsonFormat2(Transaction)
+  implicit val transactionFormat = jsonFormat2(BiTransaction)
 
   implicit object FetchTransactionResponseFormat extends RootJsonFormat[FetchTransactionResponse] {
     def write(response: FetchTransactionResponse) = {

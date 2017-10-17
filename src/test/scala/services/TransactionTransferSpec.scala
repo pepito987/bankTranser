@@ -35,7 +35,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       server.service.accountsDB.put(to, BankAccount(to, 200))
 
-      val transfer = Transaction(to, amount)
+      val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/000/transfer")
         .header("Content-Type", "application/json")
         .postData(
@@ -57,7 +57,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       server.service.accountsDB.put(from, BankAccount(from, 200))
 
-      val transfer = Transaction(to, amount)
+      val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
         .header("Content-Type", "application/json")
         .postData(
@@ -79,7 +79,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       server.service.accountsDB.put(from, BankAccount(from, 200))
 
-      val transfer = Transaction(to, amount)
+      val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
         .header("Content-Type", "application/json")
         .postData(
@@ -105,7 +105,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       server.service.accountsDB.put(from.id, from)
       server.service.accountsDB.put(to.id, to)
 
-      val transfer = Transaction(to.id, amount)
+      val transfer = BiTransaction(to.id, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
         .header("Content-Type", "application/json")
         .postData(
@@ -132,7 +132,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       server.service.accountsDB.put(from, BankAccount(from, 200))
       server.service.accountsDB.put(to, BankAccount(to, 200))
 
-      val transfer = Transaction(to, amount)
+      val transfer = BiTransaction(to, amount)
       val response = Http("http://localhost:8080/account/123/transfer")
         .header("Content-Type", "application/json")
         .postData(
@@ -190,7 +190,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
           Http(s"http://localhost:8080/account/${r.from}/transfer")
             .header("Content-Type", "application/json")
             .postData(
-              Transaction(r.to,r.amount).toJson.toString()
+              BiTransaction(r.to,r.amount).toJson.toString()
             ).asString
         })
 

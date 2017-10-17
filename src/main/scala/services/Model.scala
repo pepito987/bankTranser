@@ -11,7 +11,7 @@ case class Transfer(from: String, to: String, amount: BigDecimal) extends Transa
 
 sealed trait TransactionRequest
 case class SingleTransaction(amount: BigDecimal) extends TransactionRequest
-case class Transaction(to: String, amount: BigDecimal) extends TransactionRequest
+case class BiTransaction(to: String, amount: BigDecimal) extends TransactionRequest
 
 case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class FailedTransactionResponse(id:String, reason: String)
@@ -19,9 +19,9 @@ case class FailedTransactionResponse(id:String, reason: String)
 case class FetchTransactionResponse(transactionId:String, accountId:String, balance: Option[BigDecimal] = None, time: DateTime)
 case class ErrorResponse(reason: String)
 
-sealed trait TransactionStatus
-case class SuccessTransaction(id:String, request: TransactionType, balance: BigDecimal, time: DateTime)extends TransactionStatus
-case class FailedTransaction(id: String, request: TransactionType, error: Error, time: DateTime) extends TransactionStatus
+sealed trait TransactionRecord
+case class SuccessTransaction(id:String, request: TransactionType, balance: BigDecimal, time: DateTime)extends TransactionRecord
+case class FailedTransaction(id: String, request: TransactionType, error: Error, time: DateTime) extends TransactionRecord
 
 sealed trait TransferStatus
 case class FailedWithdraw(error: Error) extends TransferStatus

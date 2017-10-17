@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory
 trait AccountService {
   val logger = LoggerFactory.getLogger(classOf[AccountService])
   val accountsDB: scala.collection.concurrent.Map[String, BankAccount]
-  val transactionsDB: scala.collection.concurrent.Map[String, TransactionStatus]
+  val transactionsDB: scala.collection.concurrent.Map[String, TransactionRecord]
 
   def create(): BankAccount = accountsDB.synchronized {
     val id = UUID.randomUUID().toString
@@ -23,7 +23,7 @@ trait AccountService {
     accountsDB.get(id)
   }
 
-  def getTransaction(transactionId:String, accountId:String): Either[Error, TransactionStatus] = {
+  def getTransaction(transactionId:String, accountId:String): Either[Error, TransactionRecord] = {
     for {
       _ <- getAccount(accountId).toRight(AccountNotFound())
       tx <- transactionsDB.get(transactionId).toRight(TransactionNotFound())
@@ -59,7 +59,7 @@ trait AccountService {
     transaction
   }
 
-  def withdraw(withdrawRequest: Withdraw): TransactionStatus = {
+  def withdraw(withdrawRequest: Withdraw): TransactionRecord = {
     if (withdrawRequest.amount < 0){
       storeFailTransaction(withdrawRequest,AmountNotValid())
     }
@@ -75,7 +75,7 @@ trait AccountService {
     }
   }
 
-  def deposit(depositRequest: Deposit): TransactionStatus = {
+  def deposit(depositRequest: Deposit): TransactionRecord = {
     if (depositRequest.amount < 0)
       storeFailTransaction(depositRequest,AmountNotValid())
     else{
@@ -89,7 +89,7 @@ trait AccountService {
     }
   }
 
-  def transfer(transferRequest: Transfer): TransactionStatus = {
+  def transfer(transferRequest: Transfer): TransactionRecord = {
 
     def doWithdraw(transferRequest: Transfer) = {
       if(transferRequest.amount <0)

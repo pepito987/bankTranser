@@ -22,7 +22,7 @@ class Server extends JsonSupport {
   //  var db = Map.empty[String,BankAccount]
   val service = new AccountService {
     override val accountsDB = new ConcurrentHashMap[String, BankAccount]().asScala
-    override val transactionsDB = new ConcurrentHashMap[String, TransactionStatus]().asScala
+    override val transactionsDB = new ConcurrentHashMap[String, TransactionRecord]().asScala
   }
 
   val regectionHandler = RejectionHandler.newBuilder()
@@ -80,7 +80,7 @@ class Server extends JsonSupport {
         path(".*".r / "transfer") { srcAccId =>
           pathEndOrSingleSlash{
             post {
-              entity(as[Transaction]) { request =>
+              entity(as[BiTransaction]) { request =>
                 service.transfer(Transfer(srcAccId,request.to,request.amount)) match {
                   case SuccessTransaction(id, _, balance, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
                   case FailedTransaction(id, _, err: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))

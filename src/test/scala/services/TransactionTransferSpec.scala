@@ -25,7 +25,6 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[ErrorResponse].reason shouldBe RequestNotValid().errorMessage
     }
 
     "return 404 if the source account does not exist and store the transaction" in {
@@ -243,7 +242,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FetchTransactionResponse].balance.get shouldBe 87
+      response.body.parseJson.convertTo[TransactionRecordResponse].balance.get shouldBe 87
     }
   }
   "GET on /account/{id}/txs" should {
@@ -261,8 +260,8 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       val response = Http(s"http://localhost:8080/account/123/txs").asString
 
       response.code shouldBe 200
-      val transactions: List[FetchTransactionResponse] = response.body.parseJson.convertTo[List[FetchTransactionResponse]]
-      transactions shouldBe List.empty[FetchTransactionResponse]
+      val transactions: List[TransactionRecordResponse] = response.body.parseJson.convertTo[List[TransactionRecordResponse]]
+      transactions shouldBe List.empty[TransactionRecordResponse]
     }
 
     "return 200 with a list of transactions for the given user account" in {
@@ -277,7 +276,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       val response = Http(s"http://localhost:8080/account/123/txs").asString
 
       response.code shouldBe 200
-      val transactions: List[FetchTransactionResponse] = response.body.parseJson.convertTo[List[FetchTransactionResponse]]
+      val transactions: List[TransactionRecordResponse] = response.body.parseJson.convertTo[List[TransactionRecordResponse]]
       transactions.size shouldEqual 3
     }
 

@@ -15,7 +15,6 @@ trait JsonSupport extends SprayJsonSupport {
 
   implicit val insufficientFundFormat = jsonFormat1(InsufficientFund)
   implicit val accountNotFoundFormat = jsonFormat1(AccountNotFound)
-  implicit val internalErrorFormat = jsonFormat1(RequestNotValid)
   implicit val amountNotValidFormat = jsonFormat1(AmountNotValid)
   implicit val successTransactionResponseFormat = jsonFormat2(SuccessTransactionResponse)
   implicit val FailedTransactionResponseFormat = jsonFormat2(FailedTransactionResponse)
@@ -24,8 +23,8 @@ trait JsonSupport extends SprayJsonSupport {
   implicit val singleTransactionFormat = jsonFormat1(SingleTransaction)
   implicit val transactionFormat = jsonFormat2(BiTransaction)
 
-  implicit object FetchTransactionResponseFormat extends RootJsonFormat[FetchTransactionResponse] {
-    def write(response: FetchTransactionResponse) = {
+  implicit object FetchTransactionResponseFormat extends RootJsonFormat[TransactionRecordResponse] {
+    def write(response: TransactionRecordResponse) = {
       JsObject(
         "transactionId" -> JsString(response.transactionId),
         "accountId" -> JsString(response.accountId),
@@ -37,9 +36,9 @@ trait JsonSupport extends SprayJsonSupport {
     def read(value: JsValue) = {
       value.asJsObject.getFields("transactionId","accountId","balance","time") match {
         case Seq(JsString(transactionId), JsString(accountId), JsNumber(balance), JsString(time)) =>
-          FetchTransactionResponse(transactionId,accountId,Some(JsNumber(balance).convertTo[BigDecimal]),DateTime.parse(time))
+          TransactionRecordResponse(transactionId,accountId,Some(JsNumber(balance).convertTo[BigDecimal]),DateTime.parse(time))
         case Seq(JsString(transactionId), JsString(accountId), JsNull, JsString(time)) =>
-          FetchTransactionResponse(transactionId,accountId,None,DateTime.parse(time))
+          TransactionRecordResponse(transactionId,accountId,None,DateTime.parse(time))
 
       }
     }

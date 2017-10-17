@@ -38,13 +38,13 @@ trait AccountService {
     } yield tx
   }
 
-  def getTransactions(accId: String): Either[AccountNotFound, List[FetchTransactionResponse]] ={
+  def getTransactions(accId: String): Either[AccountNotFound, List[TransactionRecordResponse]] ={
     accountsDB.get(accId).map{ _ =>
-      val records: List[FetchTransactionResponse] = transactionsDB.values
+      val records: List[TransactionRecordResponse] = transactionsDB.values
         .filter(_.account == accId)
         .map {
-          case tx: SuccessTransaction => FetchTransactionResponse(tx.id, tx.account, Some(tx.balance), tx.time)
-          case tx: FailedTransaction => FetchTransactionResponse(tx.id, tx.account, time = tx.time)
+          case tx: SuccessTransaction => TransactionRecordResponse(tx.id, tx.account, Some(tx.balance), tx.time)
+          case tx: FailedTransaction => TransactionRecordResponse(tx.id, tx.account, time = tx.time)
         }.toList
       Right(records)
     }.getOrElse(Left(AccountNotFound()))

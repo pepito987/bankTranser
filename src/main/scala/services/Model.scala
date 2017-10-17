@@ -17,9 +17,7 @@ case class CreateAccountRequest(userName:String, initialBalance:Option[BigDecima
 
 case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class FailedTransactionResponse(id:String, reason: String)
-
-case class FetchTransactionResponse(transactionId:String, accountId:String, balance: Option[BigDecimal] = None, time: DateTime)
-case class FetchTransactionListResponse(transactions: List[FetchTransactionResponse])
+case class TransactionRecordResponse(transactionId:String, accountId:String, balance: Option[BigDecimal] = None, time: DateTime)
 case class ErrorResponse(reason: String)
 
 sealed trait TransactionRecord {
@@ -39,7 +37,6 @@ sealed trait Error{
 case class InsufficientFund(override val errorMessage: String = "Insufficient Fund") extends Error
 case class AccountNotFound(override val errorMessage: String = "Account not found") extends Error
 case class AmountNotValid(override val errorMessage: String = "The amount value is not valid") extends Error
-case class RequestNotValid(override val errorMessage: String = "The request is not valid") extends Error
 case class TransactionNotFound(override val errorMessage: String = "The the transaction does not exist") extends Error
 case class InvalidName(override val errorMessage: String = "Invalid name for the account") extends Error
 

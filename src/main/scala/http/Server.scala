@@ -29,7 +29,7 @@ class Server extends JsonSupport {
 
   val regectionHandler = RejectionHandler.newBuilder()
     .handle {
-      case MalformedRequestContentRejection(msg, _) => complete((StatusCodes.BadRequest, ErrorResponse(RequestNotValid().errorMessage)))
+      case MalformedRequestContentRejection(msg, _) => complete((StatusCodes.BadRequest, ErrorResponse("Unexpected request")))
       case _ => complete(StatusCodes.InternalServerError)
     }
     .result()
@@ -39,10 +39,12 @@ class Server extends JsonSupport {
       pathEndOrSingleSlash {
         post {
           entity(as[CreateAccountRequest]) { request =>
+
             service.create(request.userName, request.initialBalance) match {
               case Right(account) => complete(StatusCodes.Created, account)
               case Left(e:InvalidName) => complete(StatusCodes.BadRequest, ErrorResponse(e.errorMessage) )
               case Left(e:AmountNotValid) => complete(StatusCodes.BadRequest, ErrorResponse(e.errorMessage) )
+              case Left(e) => complete(StatusCodes.InternalServerError, ErrorResponse(e.errorMessage) )
             }
           }
         }
@@ -80,6 +82,7 @@ class Server extends JsonSupport {
                   case SuccessTransaction(id, _, _, balance, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
                   case FailedTransaction(id, _, _, error: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, error.errorMessage))
                   case FailedTransaction(id, _, _, error: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, error.errorMessage))
+                  case FailedTransaction(_, _, _, error, _) => complete(StatusCodes.InternalServerError, ErrorResponse(error.errorMessage))
                 }
               }
             }
@@ -94,6 +97,7 @@ class Server extends JsonSupport {
                   case FailedTransaction(id, _, _, err: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
                   case FailedTransaction(id, _, _, err: InsufficientFund, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
                   case FailedTransaction(id, _, _, err: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(_, _, _, err, _) => complete(StatusCodes.InternalServerError, ErrorResponse(err.errorMessage))
                 }
               }
             }
@@ -105,8 +109,8 @@ class Server extends JsonSupport {
             pathEndOrSingleSlash {
               get {
                 service.getTransaction(transactionId,accountId) match {
-                  case Right(tx: SuccessTransaction) => complete(StatusCodes.OK, FetchTransactionResponse(tx.id, accountId, Some(tx.balance), tx.time))
-                  case Right(tx: FailedTransaction) => complete(StatusCodes.OK, FetchTransactionResponse(tx.id, accountId, time = tx.time))
+                  case Right(tx: SuccessTransaction) => complete(StatusCodes.OK, TransactionRecordResponse(tx.id, accountId, Some(tx.balance), tx.time))
+                  case Right(tx: FailedTransaction) => complete(StatusCodes.OK, TransactionRecordResponse(tx.id, accountId, time = tx.time))
                   case Left(x) => complete(StatusCodes.NotFound, ErrorResponse(x.errorMessage))
                 }
               }

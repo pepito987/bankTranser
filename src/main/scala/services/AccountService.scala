@@ -38,6 +38,18 @@ trait AccountService {
     } yield tx
   }
 
+  def getTransactions(accId: String): Either[AccountNotFound, List[FetchTransactionResponse]] ={
+    accountsDB.get(accId).map{ _ =>
+      val records: List[FetchTransactionResponse] = transactionsDB.values
+        .filter(_.account == accId)
+        .map {
+          case tx: SuccessTransaction => FetchTransactionResponse(tx.id, tx.account, Some(tx.balance), tx.time)
+          case tx: FailedTransaction => FetchTransactionResponse(tx.id, tx.account, time = tx.time)
+        }.toList
+      Right(records)
+    }.getOrElse(Left(AccountNotFound()))
+  }
+
   private def execDeposit(accountId: String, amount: BigDecimal): Either[Error, BankAccount] = {
     this.synchronized{
       accountsDB.get(accountId).map { account =>
@@ -53,31 +65,31 @@ trait AccountService {
     }
   }
 
-  private def storeFailTransaction(request: TransactionType, error: Error) = {
+  private def storeFailTransaction(account:String, request: TransactionType, error: Error) = {
     logger.debug(s"Storing failed Transaction: [$request] with error: [$error]")
-    val transaction = FailedTransaction(UUID.randomUUID().toString,request,error, DateTime.now())
+    val transaction = FailedTransaction(UUID.randomUUID().toString,account,request,error, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
-  private def storeSuccessTransaction(request: TransactionType, balance: BigDecimal) = {
+  private def storeSuccessTransaction(account:String,request: TransactionType, balance: BigDecimal) = {
     logger.debug(s"Storing successful transaction: [$request] with balance: [$balance]")
-    val transaction = SuccessTransaction(UUID.randomUUID().toString,request,balance, DateTime.now())
+    val transaction = SuccessTransaction(UUID.randomUUID().toString,account, request,balance, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
   def withdraw(withdrawRequest: Withdraw): TransactionRecord = {
     if (withdrawRequest.amount < 0){
-      storeFailTransaction(withdrawRequest,AmountNotValid())
+      storeFailTransaction(withdrawRequest.from,withdrawRequest,AmountNotValid())
     }
     else{
       execDeposit(withdrawRequest.from, -withdrawRequest.amount) match {
         case Right(account) =>{
-          storeSuccessTransaction(withdrawRequest,account.balance)
+          storeSuccessTransaction(withdrawRequest.from,withdrawRequest,account.balance)
         }
         case Left(error) => {
-          storeFailTransaction(withdrawRequest,error)
+          storeFailTransaction(withdrawRequest.from,withdrawRequest,error)
         }
       }
     }
@@ -85,13 +97,13 @@ trait AccountService {
 
   def deposit(depositRequest: Deposit): TransactionRecord = {
     if (depositRequest.amount < 0)
-      storeFailTransaction(depositRequest,AmountNotValid())
+      storeFailTransaction(depositRequest.to,depositRequest,AmountNotValid())
     else{
       execDeposit(depositRequest.to, depositRequest.amount) match {
         case Right(account) => {
-          storeSuccessTransaction(depositRequest,account.balance)
+          storeSuccessTransaction(depositRequest.to,depositRequest,account.balance)
         }
-        case Left(err) => storeFailTransaction(depositRequest,err)
+        case Left(err) => storeFailTransaction(depositRequest.to,depositRequest,err)
       }
 
     }
@@ -123,13 +135,13 @@ trait AccountService {
       case Left(err: FailedDeposit) => {
         logger.info(s"Failed transaction with Rollback on request: [$transferRequest]")
         doRollback(transferRequest)
-        storeFailTransaction(transferRequest,err.error)
+        storeFailTransaction(transferRequest.from,transferRequest,err.error)
       }
       case Left(err: FailedWithdraw) =>{
-        storeFailTransaction(transferRequest,err.error)
+        storeFailTransaction(transferRequest.from,transferRequest,err.error)
       }
       case Right(account) =>{
-        storeSuccessTransaction(transferRequest,account.balance)
+        storeSuccessTransaction(transferRequest.from,transferRequest,account.balance)
       }
     }
   }

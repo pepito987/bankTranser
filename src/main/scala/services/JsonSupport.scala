@@ -36,13 +36,11 @@ trait JsonSupport extends SprayJsonSupport {
 
     def read(value: JsValue) = {
       value.asJsObject.getFields("transactionId","accountId","balance","time") match {
-        case Seq(
-        JsString(transactionId),
-        JsString(accountId),
-        JsNumber(balance),
-        JsString(time)
-        ) =>
+        case Seq(JsString(transactionId), JsString(accountId), JsNumber(balance), JsString(time)) =>
           FetchTransactionResponse(transactionId,accountId,Some(JsNumber(balance).convertTo[BigDecimal]),DateTime.parse(time))
+        case Seq(JsString(transactionId), JsString(accountId), JsNull, JsString(time)) =>
+          FetchTransactionResponse(transactionId,accountId,None,DateTime.parse(time))
+
       }
     }
   }

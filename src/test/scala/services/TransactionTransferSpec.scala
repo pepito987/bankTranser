@@ -6,6 +6,7 @@ import common.ServiceAware
 import org.joda.time.DateTime
 import org.scalatest.Matchers
 import org.scalatest.concurrent.ScalaFutures
+import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -15,7 +16,7 @@ import scalaj.http.Http
 
 class TransactionTransferSpec extends ServiceAware with Matchers with JsonSupport with ScalaFutures {
 
-  "POST /transaction/transfer" should {
+  "POST /account/{id}/transfer" should {
     "return 400 if the body is empty and log the transaction" in {
 
       val response = Http("http://localhost:8080/account/000/transfer")
@@ -89,10 +90,10 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       response.code shouldBe 404
       server.service.accountsDB(from).balance shouldBe 200
 
-//      server.service.transactionsDB.values
-//        .collect{case x:FailedTransaction => x}
-//        .find(tx => tx.request.isInstanceOf[Transaction])
-//        .get.request.asInstanceOf[Transaction].amount shouldBe true
+      //      server.service.transactionsDB.values
+      //        .collect{case x:FailedTransaction => x}
+      //        .find(tx => tx.request.isInstanceOf[Transaction])
+      //        .get.request.asInstanceOf[Transaction].amount shouldBe true
 
     }
 
@@ -208,7 +209,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       }
     }
   }
-  "GET on /transaction/tx/{id} " should {
+  "GET on /account/{id}/tx/{tx_id} " should {
     "return 404 if the account does not exist" in {
       val response = Http(s"http://localhost:8080/account/123/tx/9999")
         .header("Content-Type", "application/x-www-form-urlencoded").asString
@@ -233,7 +234,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
       val uuid = UUID.randomUUID().toString
-      val tx = SuccessTransaction(uuid,Transfer("111", "222", 90),87, DateTime.now())
+      val tx = SuccessTransaction(uuid,"123",Transfer("123", "222", 90),87, DateTime.now())
 
       server.service.transactionsDB.put(tx.id,tx)
 
@@ -244,6 +245,42 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       response.header("Content-Type").get shouldBe "application/json"
       response.body.parseJson.convertTo[FetchTransactionResponse].balance.get shouldBe 87
     }
+  }
+  "GET on /account/{id}/txs" should {
+    "return 404 if the account does not exist" in {
+
+      val response = Http(s"http://localhost:8080/account/123/txs").asString
+
+      response.code shouldBe 404
+      response.body.parseJson.convertTo[ErrorResponse].reason shouldBe AccountNotFound().errorMessage
+    }
+
+    "return 200 with an empty list of transactions for the given user account" in {
+      server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
+
+      val response = Http(s"http://localhost:8080/account/123/txs").asString
+
+      response.code shouldBe 200
+      val transactions: List[FetchTransactionResponse] = response.body.parseJson.convertTo[List[FetchTransactionResponse]]
+      transactions shouldBe List.empty[FetchTransactionResponse]
+    }
+
+    "return 200 with a list of transactions for the given user account" in {
+      server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
+
+      val tx1 = SuccessTransaction(UUID.randomUUID().toString,"123",Transfer("123", "222", 90),87, DateTime.now())
+      val tx2 = SuccessTransaction(UUID.randomUUID().toString,"123",Transfer("123", "222", 20),67, DateTime.now())
+      val tx3 = FailedTransaction(UUID.randomUUID().toString,"123",Transfer("123", "000", 20),AccountNotFound(), DateTime.now())
+
+      List(tx1,tx2,tx3).foreach(transaction => server.service.transactionsDB.put(transaction.id,transaction))
+
+      val response = Http(s"http://localhost:8080/account/123/txs").asString
+
+      response.code shouldBe 200
+      val transactions: List[FetchTransactionResponse] = response.body.parseJson.convertTo[List[FetchTransactionResponse]]
+      transactions.size shouldEqual 3
+    }
+
   }
 
 }

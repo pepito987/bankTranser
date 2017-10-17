@@ -8,7 +8,7 @@ import scalaj.http.Http
 
 class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport{
 
-  "Post on /deposit" should {
+  "Post on account/{id}/deposit" should {
     "return 404 if account not found and store the transaction" in {
       val depositRequest = SingleTransaction(50)
       val response = Http("http://localhost:8080/account/111/deposit")

@@ -7,7 +7,7 @@ import scalaj.http.Http
 
 class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSupport {
 
-  "POST /withdraw" should {
+  "POST /account/{id}/withdraw" should {
     "return 404 if the account does not exist and store the transaction" in {
 
       val withdrawRequest = SingleTransaction(50)

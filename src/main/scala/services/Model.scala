@@ -19,11 +19,15 @@ case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class FailedTransactionResponse(id:String, reason: String)
 
 case class FetchTransactionResponse(transactionId:String, accountId:String, balance: Option[BigDecimal] = None, time: DateTime)
+case class FetchTransactionListResponse(transactions: List[FetchTransactionResponse])
 case class ErrorResponse(reason: String)
 
-sealed trait TransactionRecord
-case class SuccessTransaction(id:String, request: TransactionType, balance: BigDecimal, time: DateTime)extends TransactionRecord
-case class FailedTransaction(id: String, request: TransactionType, error: Error, time: DateTime) extends TransactionRecord
+sealed trait TransactionRecord {
+  def id:String
+  def account:String
+}
+case class SuccessTransaction(id:String, account:String, request: TransactionType, balance: BigDecimal, time: DateTime)extends TransactionRecord
+case class FailedTransaction(id: String, account:String, request: TransactionType, error: Error, time: DateTime) extends TransactionRecord
 
 sealed trait TransferStatus
 case class FailedWithdraw(error: Error) extends TransferStatus

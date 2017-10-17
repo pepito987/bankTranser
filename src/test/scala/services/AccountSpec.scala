@@ -43,7 +43,7 @@ class AccountSpec extends ServiceAware with Matchers with JsonSupport{
   }
 
   "Post /account " should {
-    "Create a new account" in {
+    "return 200 and create a new account" in {
       val response = Http("http://localhost:8080/account")
         .header("Content-Type","application/json")
         .postData(CreateAccountRequest("Alice",Some(345)).toJson.toString())

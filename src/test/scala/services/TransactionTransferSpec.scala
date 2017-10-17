@@ -229,7 +229,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       response.body.parseJson.convertTo[ErrorResponse].reason shouldBe TransactionNotFound().errorMessage
     }
 
-    "return a transaction " in {
+    "return 200 with a transaction " in {
 
       server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
       val uuid = UUID.randomUUID().toString
@@ -274,6 +274,9 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       List(tx1,tx2,tx3).foreach(transaction => server.service.transactionsDB.put(transaction.id,transaction))
 
       val response = Http(s"http://localhost:8080/account/123/txs").asString
+      println("GET on /account/{id}/txs")
+      println(s"Request : ***")
+      println(s"Response : ${response.body.parseJson.prettyPrint}")
 
       response.code shouldBe 200
       val transactions: List[TransactionRecordResponse] = response.body.parseJson.convertTo[List[TransactionRecordResponse]]

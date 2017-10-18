@@ -142,7 +142,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
       val body = response.body.parseJson.convertTo[SuccessTransactionResponse]
-      body.balance shouldBe 150
+      body.balance shouldBe 50
 
       val fromAcc = server.service.accountsDB(from)
       val toAcc = server.service.accountsDB(to)
@@ -233,7 +233,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
       val uuid = UUID.randomUUID().toString
-      val tx = SuccessTransaction(uuid,"123",Transfer("123", "222", 90),87, DateTime.now())
+      val tx = SuccessTransaction(uuid,Transaction("123", Some("222"), 87), DateTime.now())
 
       server.service.transactionsDB.put(tx.id,tx)
 
@@ -267,11 +267,14 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
     "return 200 with a list of transactions for the given user account" in {
       server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
 
-      val tx1 = SuccessTransaction(UUID.randomUUID().toString,"123",Transfer("123", "222", 90),87, DateTime.now())
-      val tx2 = SuccessTransaction(UUID.randomUUID().toString,"123",Transfer("123", "222", 20),67, DateTime.now())
-      val tx3 = FailedTransaction(UUID.randomUUID().toString,"123",Transfer("123", "000", 20),AccountNotFound(), DateTime.now())
+      val tx1 = SuccessTransaction(UUID.randomUUID().toString,Transaction("123",Some("222"),87), DateTime.now())
+      val tx2 = SuccessTransaction(UUID.randomUUID().toString,Transaction("123",Some("222"),67), DateTime.now())
+      val tx3 = FailedTransaction(UUID.randomUUID().toString,Transaction("123",Some("000"),67), AccountNotFound(), DateTime.now())
 
-      List(tx1,tx2,tx3).foreach(transaction => server.service.transactionsDB.put(transaction.id,transaction))
+      List(tx1, tx2, tx3).foreach {
+        case tx: SuccessTransaction => server.service.transactionsDB.put(tx.id, tx)
+        case tx: FailedTransaction => server.service.transactionsDB.put(tx.id, tx)
+      }
 
       val response = Http(s"http://localhost:8080/account/123/txs").asString
       println("GET on /account/{id}/txs")

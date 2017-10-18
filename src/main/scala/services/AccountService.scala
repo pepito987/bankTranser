@@ -41,11 +41,10 @@ trait AccountService {
   def getTransactions(accId: String): Either[AccountNotFound, List[TransactionRecordResponse]] ={
     accountsDB.get(accId).map{ _ =>
       val records: List[TransactionRecordResponse] = transactionsDB.values
-        .filter(_.account == accId)
-        .map {
-          case tx: SuccessTransaction => TransactionRecordResponse(tx.id, tx.account, Some(tx.balance), tx.time)
-          case tx: FailedTransaction => TransactionRecordResponse(tx.id, tx.account, time = tx.time)
-        }.toList
+          .collect{
+            case tx: SuccessTransaction if tx.data.srcAccount == accId => TransactionRecordResponse(tx.id, tx.data.srcAccount, Some(tx.data.amount), tx.time)
+            case tx: FailedTransaction if tx.data.srcAccount == accId => TransactionRecordResponse(tx.id, tx.data.srcAccount, time = tx.time)
+          }.toList
       Right(records)
     }.getOrElse(Left(AccountNotFound()))
   }
@@ -65,31 +64,31 @@ trait AccountService {
     }
   }
 
-  private def storeFailTransaction(account:String, request: TransactionType, error: Error) = {
-    logger.debug(s"Storing failed Transaction: [$request] with error: [$error]")
-    val transaction = FailedTransaction(UUID.randomUUID().toString,account,request,error, DateTime.now())
+  private def storeFailTransaction(request: Transaction, error: Error) = {
+    logger.debug(s"Storing failed Transaction [$request] with error: [$error]")
+    val transaction = FailedTransaction(UUID.randomUUID().toString, request, error, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
-  private def storeSuccessTransaction(account:String,request: TransactionType, balance: BigDecimal) = {
-    logger.debug(s"Storing successful transaction: [$request] with balance: [$balance]")
-    val transaction = SuccessTransaction(UUID.randomUUID().toString,account, request,balance, DateTime.now())
+  private def storeSuccessTransaction(request: Transaction) = {
+    logger.debug(s"Storing successful transaction [$request]")
+    val transaction = SuccessTransaction(UUID.randomUUID().toString, request, DateTime.now())
     transactionsDB.putIfAbsent(transaction.id,transaction)
     transaction
   }
 
   def withdraw(withdrawRequest: Withdraw): TransactionRecord = {
     if (withdrawRequest.amount < 0){
-      storeFailTransaction(withdrawRequest.from,withdrawRequest,AmountNotValid())
+      storeFailTransaction(Transaction(withdrawRequest.from, amount = withdrawRequest.amount),AmountNotValid())
     }
     else{
       execDeposit(withdrawRequest.from, -withdrawRequest.amount) match {
         case Right(account) =>{
-          storeSuccessTransaction(withdrawRequest.from,withdrawRequest,account.balance)
+          storeSuccessTransaction(Transaction(withdrawRequest.from, amount = withdrawRequest.amount))
         }
         case Left(error) => {
-          storeFailTransaction(withdrawRequest.from,withdrawRequest,error)
+          storeFailTransaction(Transaction(withdrawRequest.from, amount = withdrawRequest.amount),error)
         }
       }
     }
@@ -97,13 +96,13 @@ trait AccountService {
 
   def deposit(depositRequest: Deposit): TransactionRecord = {
     if (depositRequest.amount < 0)
-      storeFailTransaction(depositRequest.to,depositRequest,AmountNotValid())
+      storeFailTransaction(Transaction(depositRequest.to, amount = depositRequest.amount),AmountNotValid())
     else{
       execDeposit(depositRequest.to, depositRequest.amount) match {
         case Right(account) => {
-          storeSuccessTransaction(depositRequest.to,depositRequest,account.balance)
+          storeSuccessTransaction(Transaction(depositRequest.to, amount = depositRequest.amount))
         }
-        case Left(err) => storeFailTransaction(depositRequest.to,depositRequest,err)
+        case Left(err) => storeFailTransaction(Transaction(depositRequest.to, amount = depositRequest.amount),err)
       }
 
     }
@@ -135,13 +134,13 @@ trait AccountService {
       case Left(err: FailedDeposit) => {
         logger.info(s"Failed transaction with Rollback on request: [$transferRequest]")
         doRollback(transferRequest)
-        storeFailTransaction(transferRequest.from,transferRequest,err.error)
+        storeFailTransaction(Transaction(transferRequest.from, Some(transferRequest.to), amount = transferRequest.amount),err.error)
       }
       case Left(err: FailedWithdraw) =>{
-        storeFailTransaction(transferRequest.from,transferRequest,err.error)
+        storeFailTransaction(Transaction(transferRequest.from, Some(transferRequest.to), amount = transferRequest.amount),err.error)
       }
       case Right(account) =>{
-        storeSuccessTransaction(transferRequest.from,transferRequest,account.balance)
+        storeSuccessTransaction(Transaction(transferRequest.from, Some(transferRequest.to), amount = transferRequest.amount))
       }
     }
   }

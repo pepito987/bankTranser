@@ -18,12 +18,10 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AccountNotFound().errorMessage
+      val body = response.body.parseJson.convertTo[FailedTransactionResponse]
+      body.reason shouldBe AccountNotFound().errorMessage
 
-      server.service.transactionsDB.values.
-        collect{case x:FailedTransaction => x}
-        .find(tx => tx.request.isInstanceOf[Deposit])
-        .get.request.asInstanceOf[Deposit].amount shouldBe depositRequest.amount
+      server.service.transactionsDB.get(body.id).collect{ case x: FailedTransaction => x.data.amount}.get shouldBe depositRequest.amount
     }
 
     "return 400 if the amount is negative and store the transaction" in {
@@ -38,12 +36,10 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
 
       response.code shouldBe 400
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AmountNotValid().errorMessage
+      val body = response.body.parseJson.convertTo[FailedTransactionResponse]
+      body.reason shouldBe AmountNotValid().errorMessage
 
-      server.service.transactionsDB.values.
-        collect{case x:FailedTransaction => x}
-        .find(tx => tx.request.isInstanceOf[Deposit])
-        .get.request.asInstanceOf[Deposit].amount shouldBe depositRequest.amount
+      server.service.transactionsDB.get(body.id).collect{ case x: FailedTransaction => x.data.amount }.get shouldBe depositRequest.amount
     }
 
     "return 200 if the deposit is possible and store the transaction" in {
@@ -59,7 +55,7 @@ class TransactionDepositSpec extends ServiceAware with Matchers with JsonSupport
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
       val tx = response.body.parseJson.convertTo[SuccessTransactionResponse]
-      tx.balance shouldBe 250
+      tx.balance shouldBe 50
 
       server.service.transactionsDB.contains(tx.id) shouldBe true
     }

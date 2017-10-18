@@ -64,10 +64,10 @@ class Server extends JsonSupport {
             post {
               entity(as[SingleTransaction]) { request =>
                 service.withdraw(Withdraw(srcAccId, request.amount)) match {
-                  case SuccessTransaction(id, _, _, balance, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
-                  case FailedTransaction(id, _, _, err: InsufficientFund, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
-                  case FailedTransaction(id, _, _, err: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
-                  case FailedTransaction(id, _, _, err: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
+                  case SuccessTransaction(id, data, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, data.amount))
+                  case FailedTransaction(id, _, err: InsufficientFund, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(id, _, err: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(id, _, err: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
                   case _ => complete(StatusCodes.InternalServerError)
                 }
               }
@@ -79,10 +79,10 @@ class Server extends JsonSupport {
             post {
               entity(as[SingleTransaction]) { request =>
                 service.deposit(Deposit(srcAccId,request.amount)) match {
-                  case SuccessTransaction(id, _, _, balance, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
-                  case FailedTransaction(id, _, _, error: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, error.errorMessage))
-                  case FailedTransaction(id, _, _, error: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, error.errorMessage))
-                  case FailedTransaction(_, _, _, error, _) => complete(StatusCodes.InternalServerError, ErrorResponse(error.errorMessage))
+                  case SuccessTransaction(id, data, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, data.amount))
+                  case FailedTransaction(id, _, error: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, error.errorMessage))
+                  case FailedTransaction(id, _, error: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, error.errorMessage))
+                  case FailedTransaction(_, _, error, _) => complete(StatusCodes.InternalServerError, ErrorResponse(error.errorMessage))
                 }
               }
             }
@@ -93,11 +93,11 @@ class Server extends JsonSupport {
             post {
               entity(as[BiTransaction]) { request =>
                 service.transfer(Transfer(srcAccId,request.to,request.amount)) match {
-                  case SuccessTransaction(id, _, _, balance, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, balance))
-                  case FailedTransaction(id, _, _, err: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
-                  case FailedTransaction(id, _, _, err: InsufficientFund, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
-                  case FailedTransaction(id, _, _, err: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
-                  case FailedTransaction(_, _, _, err, _) => complete(StatusCodes.InternalServerError, ErrorResponse(err.errorMessage))
+                  case SuccessTransaction(id, data, _) => complete(StatusCodes.OK, SuccessTransactionResponse(id, data.amount))
+                  case FailedTransaction(id, _, err: AccountNotFound, _) => complete(StatusCodes.NotFound, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(id, _, err: InsufficientFund, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(id, _, err: AmountNotValid, _) => complete(StatusCodes.BadRequest, FailedTransactionResponse(id, err.errorMessage))
+                  case FailedTransaction(_, _, err, _) => complete(StatusCodes.InternalServerError, ErrorResponse(err.errorMessage))
                 }
               }
             }
@@ -109,7 +109,7 @@ class Server extends JsonSupport {
             pathEndOrSingleSlash {
               get {
                 service.getTransaction(transactionId,accountId) match {
-                  case Right(tx: SuccessTransaction) => complete(StatusCodes.OK, TransactionRecordResponse(tx.id, accountId, Some(tx.balance), tx.time))
+                  case Right(tx: SuccessTransaction) => complete(StatusCodes.OK, TransactionRecordResponse(tx.id, accountId, Some(tx.data.amount), tx.time))
                   case Right(tx: FailedTransaction) => complete(StatusCodes.OK, TransactionRecordResponse(tx.id, accountId, time = tx.time))
                   case Left(x) => complete(StatusCodes.NotFound, ErrorResponse(x.errorMessage))
                 }

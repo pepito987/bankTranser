@@ -19,11 +19,9 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 404
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[FailedTransactionResponse].reason shouldBe AccountNotFound().errorMessage
-      server.service.transactionsDB.values.
-        collect{case x:FailedTransaction => x}
-        .find(tx => tx.request.isInstanceOf[Withdraw])
-        .get.request.asInstanceOf[Withdraw].amount shouldBe withdrawRequest.amount
+      val body = response.body.parseJson.convertTo[FailedTransactionResponse]
+      body.reason shouldBe AccountNotFound().errorMessage
+      server.service.transactionsDB.get(body.id).collect{ case x: FailedTransaction => x.data.amount }.get shouldBe withdrawRequest.amount
     }
 
     "return 400 if the amount is bigger then the balance" in {
@@ -54,7 +52,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
       val body = response.body.parseJson.convertTo[SuccessTransactionResponse]
-      body.balance shouldBe 150
+      body.balance shouldBe 50
       server.service.transactionsDB.contains(body.id) shouldBe true
     }
 
@@ -107,7 +105,7 @@ class TransactionWithdrawSpec extends ServiceAware with Matchers with JsonSuppor
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
       val transaction = response.body.parseJson.convertTo[SuccessTransactionResponse]
-      transaction.balance shouldBe 150
+      transaction.balance shouldBe 50
       server.service.transactionsDB.contains(transaction.id) shouldBe true
     }
 

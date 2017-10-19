@@ -28,15 +28,15 @@ trait JsonSupport extends SprayJsonSupport {
       JsObject(
         "transactionId" -> JsString(response.transactionId),
         "accountId" -> JsString(response.accountId),
-        "balance" -> response.balance.toJson,
+        "amount" -> response.amount.toJson,
         "time" -> JsString(response.time.toString)
       )
     }
 
     def read(value: JsValue) = {
-      value.asJsObject.getFields("transactionId","accountId","balance","time") match {
-        case Seq(JsString(transactionId), JsString(accountId), JsNumber(balance), JsString(time)) =>
-          TransactionRecordResponse(transactionId,accountId,Some(JsNumber(balance).convertTo[BigDecimal]),DateTime.parse(time))
+      value.asJsObject.getFields("transactionId","accountId","amount","time") match {
+        case Seq(JsString(transactionId), JsString(accountId), JsNumber(amount), JsString(time)) =>
+          TransactionRecordResponse(transactionId,accountId,Some(JsNumber(amount).convertTo[BigDecimal]),DateTime.parse(time))
         case Seq(JsString(transactionId), JsString(accountId), JsNull, JsString(time)) =>
           TransactionRecordResponse(transactionId,accountId,None,DateTime.parse(time))
 

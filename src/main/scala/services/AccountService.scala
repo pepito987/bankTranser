@@ -42,8 +42,8 @@ trait AccountService {
     accountsDB.get(accId).map{ _ =>
       val records: List[TransactionRecordResponse] = transactionsDB.values
           .collect{
-            case tx: SuccessTransaction if tx.data.srcAccount == accId => TransactionRecordResponse(tx.id, tx.data.srcAccount, Some(tx.data.amount), tx.time)
-            case tx: FailedTransaction if tx.data.srcAccount == accId => TransactionRecordResponse(tx.id, tx.data.srcAccount, time = tx.time)
+            case tx: SuccessTransaction if tx.data.srcAccount == accId || tx.data.dstAccount.contains(accId) => TransactionRecordResponse(tx.id, tx.data.srcAccount, Some(tx.data.amount), tx.time)
+            case tx: FailedTransaction if tx.data.srcAccount == accId  || tx.data.dstAccount.contains(accId) => TransactionRecordResponse(tx.id, tx.data.srcAccount, time = tx.time)
           }.toList
       Right(records)
     }.getOrElse(Left(AccountNotFound()))

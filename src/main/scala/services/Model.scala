@@ -18,7 +18,7 @@ case class CreateAccountRequest(userName:String, initialBalance:Option[BigDecima
 
 case class SuccessTransactionResponse(id:String, balance: BigDecimal)
 case class FailedTransactionResponse(id:String, reason: String)
-case class TransactionRecordResponse(transactionId:String, accountId:String, balance: Option[BigDecimal] = None, time: DateTime)
+case class TransactionRecordResponse(transactionId:String, accountId:String, amount: Option[BigDecimal] = None, time: DateTime)
 case class ErrorResponse(reason: String)
 
 sealed trait TransactionRecord

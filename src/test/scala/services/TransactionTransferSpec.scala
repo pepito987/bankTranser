@@ -242,7 +242,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
       response.code shouldBe 200
       response.header("Content-Type").get shouldBe "application/json"
-      response.body.parseJson.convertTo[TransactionRecordResponse].balance.get shouldBe 87
+      response.body.parseJson.convertTo[TransactionRecordResponse].amount.get shouldBe 87
     }
   }
   "GET on /account/{id}/txs" should {
@@ -266,6 +266,7 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
 
     "return 200 with a list of transactions for the given user account" in {
       server.service.accountsDB.put("123", BankAccount("123", "bob", 200))
+      server.service.accountsDB.put("222", BankAccount("222", "John", 200))
 
       val tx1 = SuccessTransaction(UUID.randomUUID().toString,Transaction("123",Some("222"),87), DateTime.now())
       val tx2 = SuccessTransaction(UUID.randomUUID().toString,Transaction("123",Some("222"),67), DateTime.now())
@@ -276,14 +277,15 @@ class TransactionTransferSpec extends ServiceAware with Matchers with JsonSuppor
         case tx: FailedTransaction => server.service.transactionsDB.put(tx.id, tx)
       }
 
-      val response = Http(s"http://localhost:8080/account/123/txs").asString
-      println("GET on /account/{id}/txs")
-      println(s"Request : ***")
-      println(s"Response : ${response.body.parseJson.prettyPrint}")
+      val srcAccountResponse = Http(s"http://localhost:8080/account/123/txs").asString
+      val dstAccountResponse = Http(s"http://localhost:8080/account/222/txs").asString
 
-      response.code shouldBe 200
-      val transactions: List[TransactionRecordResponse] = response.body.parseJson.convertTo[List[TransactionRecordResponse]]
-      transactions.size shouldEqual 3
+      srcAccountResponse.code shouldBe 200
+      val srcTransactions: List[TransactionRecordResponse] = srcAccountResponse.body.parseJson.convertTo[List[TransactionRecordResponse]]
+      val dstTransactions: List[TransactionRecordResponse] = dstAccountResponse.body.parseJson.convertTo[List[TransactionRecordResponse]]
+      println(srcAccountResponse.body.parseJson.prettyPrint)
+      srcTransactions.size shouldEqual 3
+      dstTransactions.size shouldEqual 2
     }
 
   }
